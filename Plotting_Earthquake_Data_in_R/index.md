@@ -4,9 +4,6 @@ author: "Edmund Julian Ofilada"
 date: "February 20, 2018"
 output: 
   html_document:
-        code_folding: hide
-        theme: spacelab
-        highlight: tango
         keep_md: true
 ---
 
