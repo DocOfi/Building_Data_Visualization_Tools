@@ -47,4 +47,4 @@ You can click on the `index.md` file in each directory to display the file in ht
 - [Storms_in_Mindanao](/Building_Data_Visualization_Tools/Storms_in_Mindanao/)
      - Does Mindanao have fewer storms compare to the rest of the Philippines?
 
-#### To download the content of this repository as a .zip file, click on the Download ZIP button. If you have a GitHub account, you can fork the content so you'll have a copy on your GitHub account.  
+#### To download the content of this repository as a .zip file, click on this [link](/Building_Data_Visualization_Tools/archive/gh-pages.zip) or click on the Download ZIP button. If you have a GitHub account, you can fork the content so you'll have a copy on your GitHub account.  
