@@ -35,16 +35,16 @@ You can click on the `index.md` file in each directory to display the file in ht
 
 ## Content 
 
-- [Bohol_2013]("https://docofi.github.io/Building_Data_Visualization_Tools/Bohol_2013/")
+- [Bohol_2013](/Bohol_2013/)
      - This project depicts the double tragedy that the province of Bohol faced during year 2013.
      
-- [Plotting_Earthquake_Data_in_R]("https://docofi.github.io/Building_Data_Visualization_Tools/Plotting_Earthquake_Data_in_R/")
+- [Plotting_Earthquake_Data_in_R](/Plotting_Earthquake_Data_in_R/)
      - Fun using R to plot earthquake data from the Philippines
      
-- [Plotting_tcx_files]("https://docofi.github.io/Building_Data_Visualization_Tools/Plotting_tcx_files/")
+- [Plotting_tcx_files](/Plotting_tcx_files/)
      - If you're using wearble body sensors, here's an alternative way to look at your data, including GPS data in case your device can track geopositions.
      
-- [Storms_in_Mindanao]("https://docofi.github.io/Building_Data_Visualization_Tools/Storms_in_Mindanao/")
+- [Storms_in_Mindanao](/Storms_in_Mindanao/)
      - Does Mindanao have fewer storms compare to the rest of the Philippines?
 
 #### To download the content of this repository as a .zip file, click on the Download ZIP button. If you have a GitHub account, you can fork the content so you'll have a copy on your GitHub account.  
