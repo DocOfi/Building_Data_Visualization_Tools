@@ -1,0 +1,275 @@
+---
+title: "Wearable Body Sensors"
+author: "Edmund Julian Ofilada"
+date: "March 13, 2018"
+output: 
+  html_document:
+        keep_md: TRUE
+        toc: true
+        toc_depth: 2
+        toc_float: true
+        theme: spacelab
+        highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Wearable Body Sensors
+
+## Synopsis 
+
+I once had the opportunity to work as a customer service agent in a call center. My job was to provide assistance to customers with problems regarding their  wearable body sensors. Wearable body sensors or trackers as we commonly refer to them are revolutionizing fitness programs by providing feedback to the user. It provides an asseesment of how well you performed today during your exercise routine and even how it compares to how well you have advanced since you started your program three months ago.
+
+Not only has it improved individual exercise programs but also programs that cater to groups of people. More and more companies are seeing the benefit of incorporating a physical fitness program together with some form of incentives based on the feedback from wearable body sensors.
+
+I was allowed to borrow from the company a tracker for a week. The tracker had a GPS (Global Positioning System) Receiver which allows you to track your geo-positions while doing an activity. I thought it was pretty neat!!!  I liked running  or taking long bike rides on weekends from Quezon City to Antipolo. I was even able to reach Lucban, Quezon and visit the Kamay ni Hesus Shrine during summer break.
+
+# The Data
+
+I will be exploring the data gathered from the tracker and have a great time plotting the results. When I left my job i lost access to my tracker's account. I tried accessing it but I Couldn't remember the right password anymore.  Luckily, I was able to save some of my data in .tcx, .csv, and .RData formats the last time I tried to explore the data while I was still in the company.
+
+The company that owned the tracker offers a nice and easy way to for its customers to view their data but i will take this opportunity to exercise my learned R skills and explore the R package [TrackeR](https://github.com/hfrick/trackeR) by Hannah Frick and Ioannis Kosmidis. The package is available in [CRAN](https://www.r-project.org/).
+
+
+```{r}
+list.files("./data")
+```
+
+The `RData` files contained the data I was able to previously download using the R package [fitbitScraper](https://github.com/corynissen/fitbitScraper) by Cory Nissen which is also available in [CRAN](https://www.r-project.org/). Back then I didn't know about the package TrackeR and was disappointed when i tried to view the .tcx files which contained the data from the GPS positions.
+
+# Intraday data
+
+Let's take a look at my data from November 18 to December 3.
+
+
+```{r}
+load("./data/fitbit1.RData")
+ls()
+```
+
+The variables: `cookie`, `fitbit.dt`, `fitbit.pwd`, `fitbit.usr`, `target`, `i` were arguments for the functions in fitbit scraper to download my data. It doesn't work now because I no longer have access to the company's email account and i don't remember the password as well. So we'll just rely on the other variables that's contained in the Rdata file. It turns out that the variable d contains all the data and the rest are just subsets of d.
+
+`iris`, as most R users know is the name of a popular dataset in R. I guess i did a couple of practice rounds with that data while downloading my Fitbit data. The .tcx files contain the gps data.
+
+
+```{r}
+library(dplyr)
+library(lubridate)
+str(d)
+```
+
+```{r}
+tail(d)
+```
+
+The downloaded data from the website summarizes the report to the number of steps achieved every 15 minutes. We can also manipulate the data in R in order to show other details with regard to time like days of the week.
+
+
+```{r}
+d$weekday <- wday(d$time, label = TRUE, abbr = TRUE)
+d$date <- date(d$time)
+head(d)
+```
+
+# Steps by day
+
+Let's take a look at the total number of steps per day during that 2 week period.
+
+
+```{r}
+day_sum <- d %>% group_by(day) %>% summarize(Total_steps = sum(steps))
+tail(day_sum)
+```
+
+We can appreciate that data better in a plot.
+
+
+```{r}
+library(leaflet)
+library(ggplot2)
+ggplot(day_sum,
+       aes(x = day,
+           y = Total_steps,
+           fill = Total_steps)) +
+        geom_bar(stat = "identity") +
+        geom_hline(yintercept = 15000) +
+        theme(axis.title.x = element_blank()) +
+        ggtitle(paste0("fitbit steps by day interval\nTotal Steps = ", sum(d$steps)))
+```
+
+
+To find out what day of the week I was able to meet my 15000 goal per day we can:
+
+
+```{r}
+d %>% group_by(date) %>% summarize(Total_steps = sum(steps)) %>% filter(Total_steps > 15000) %>% mutate(weekday = wday(date, label = TRUE))
+```
+
+At this point, I was transitioning from a baseline goal of 10,000 steps per day 15,000 steps but wasn't meeting much success. 
+
+# Prettier plot
+
+We can improve the previous graph such that it conveys the information readily by:
+
+
+```{r}
+d %>% group_by(date) %>%
+        summarize(Total_steps = sum(steps)) %>%
+        mutate(target_met = Total_steps >= 15000) %>%
+        ggplot(aes(x = date,
+                   y = Total_steps,
+                   fill = target_met)) +
+        geom_bar(stat = "identity") +
+        geom_hline(yintercept = 15000,
+                   linetype = "dashed") +
+        ggtitle("Steps by Day")
+```
+
+# Steps throughout the day
+
+If we want to see number of steps throughout the day by 15 min intervals we can:
+
+
+```{r}
+ggplot(d, aes(timestamp, steps, fill = steps)) +
+     geom_bar(stat = "identity") +
+     facet_grid(day ~ .) +
+     theme(axis.text.x = element_blank()) +
+     xlab("15 minute interval") +
+     ggtitle("fitbit steps by 15 min interval")
+```
+
+
+# GPS data
+
+Let's turn our attention now to mapping our gps data.
+
+## Read in the data
+
+We read in the data using the `readTCX` function from the trackeR package
+
+
+```{r}
+library(trackeR)
+am_run <- readTCX(file = "./data/fitbit.tcx", timezone = "Asia/Taipei")
+str(am_run)
+```
+
+```{r}
+summary(am_run)
+```
+
+
+The data contains a run around the neighborhood lasting for a little over an hour. Aside from providing information about the geo-positions, the tracker also provides information about altitude, time, heart rate, and distance. 
+
+## Convert data frame to time series data
+
+We'll tranform our data frame to a time series data to better plot the variables. We'll use the function `trackeRdata` from the trackeR package.
+
+
+```{r}
+am_run_ts <- trackeRdata(am_run)
+str(am_run_ts, 2)
+```
+
+# Summary
+
+We can see a summary of my performance by using the `summary` function.
+
+
+```{r}
+summary(am_run_ts, movingThreshold = 1)
+```
+
+
+The summary function not only provided a summary of the variables in the data like total distance, duration, average speed and average heart rate, it also combined or extended the data to come up with other variables such as average heart rate when moving or resting.
+
+# Plotting Heartbeat and pace
+
+We can also plot heartbeat and pace.
+
+
+```{r}
+plot(am_run_ts, what = c("heart.rate", "distance", "pace"))
+```
+
+Looking at the plot we can see a series of up and down movement in pace and heartbeat.  This is due to the many crossroads and vehicular traffic in the area.  It would be better if we have a sustained level of heart rate and pace.
+
+# Mapping the run
+
+We will use the plotRoute function from the package TrackeR
+
+
+```{r}
+plotRoute(am_run_ts, zoom = 15, source = "google")
+```
+
+
+or the leaflet function from the package leaflet which gives us a lot of flexibility on how our plot should look
+
+
+```{r, echo=TRUE, eval=FALSE}
+leaflet(am_run) %>%
+                addTiles() %>% 
+                addProviderTiles("OpenStreetMap.Mapnik") %>% 
+                setView(121.0289, 14.61739, zoom = 15) %>%
+                addPolylines(~longitude, ~latitude) 
+```
+
+<iframe width="500" height="300" src="https://www.dropbox.com/s/ucgy93micygjdf6/maprun.html?dl=0"></iframe>
+
+<br>
+
+The next .tcx files contain a session on the stationary bike. Wearing the tracker on the wrist will probably result in errors in the number of steps counted since the algorithm contained in the tracker was designed to monitor the swinging of arms during walking, which in turn gives the number of steps. And since riding a stationary bike does not mimic the swinging movement of the arms, I decided to wear the tracker on my ankle and see what would happen. Since the bike is also stationary, we won't have any use for GSP data. 
+
+# Stationary bike data
+
+The value of the tracker for this exercise is to monitor the heart rate. The longer you can keep your heart rate at a higher level during an exercise session, the more calories you burn.  I wanted to find out how high my heart rate would be at the peak of my effort.
+
+
+```{r}
+bike1 <- readTCX(file = "./data/fitbit2.tcx", timezone = "Asia/Taipei")
+bike2 <- readTCX(file = "./data/fitbit3.tcx", timezone = "Asia/Taipei")
+stat_bike <- rbind(bike1, bike2)
+stat_bike_ts <- trackeRdata(stat_bike)
+str(stat_bike_ts, 2)
+```
+
+
+## Summary data
+
+```{r}
+summary(stat_bike_ts, movingThreshold = 1)
+```
+
+Because I poured all my effort from start to finish of the stationary biking session I was able to maintain an average heart rate of 136.33.  Because of the sustained best effort, i was only able to keep going for 30 mminutes.
+
+## Plotting heart rate and pace
+
+The plot shows that i was able to reach a peak heart rate of about 145 and the steep incline of the plot showed how fast I achioeved the peak heart rate
+
+
+```{r}
+plot(stat_bike_ts)
+```
+
+You can also plot the percentage of times you were able to maintain a range of heart beat.
+
+```{r}
+zone2 <- zones(stat_bike_ts)
+plot(zone2)
+```
+
+There are so many other useful and interesting functions in the TrackeR package but because we have a limited amount of data, we are unable to show them here. You can find the intoructory tutorial for the package trackeR at this URL https://cran.r-project.org/web/packages/trackeR/vignettes/TourDetrackeR.html
+
+# Conclusion
+
+Waerable sensors are great motivators for individuals to exercise by providing feedback with regard to the performance of the individual. It can help to set goals and provide interaction among people having the same goals and purpose. Companies can take advantage of this devices to keep their workforce healthy, increase productivity, and decrease medical insurance cost for the employee and the company. 
+
+
+
+
+
+
