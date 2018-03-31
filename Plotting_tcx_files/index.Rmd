@@ -8,8 +8,6 @@ output:
         toc: true
         toc_depth: 2
         toc_float: true
-        theme: spacelab
-        highlight: tango
 ---
 
 ```{r setup, include=FALSE}
@@ -210,7 +208,7 @@ plotRoute(am_run_ts, zoom = 15, source = "google")
 or the leaflet function from the package leaflet which gives us a lot of flexibility on how our plot should look
 
 
-```{r, echo=TRUE, eval=FALSE}
+```{r}
 leaflet(am_run) %>%
                 addTiles() %>% 
                 addProviderTiles("OpenStreetMap.Mapnik") %>% 
@@ -218,7 +216,7 @@ leaflet(am_run) %>%
                 addPolylines(~longitude, ~latitude) 
 ```
 
-<iframe width="700" height="500" src="https://docofi.github.io/extras/www/maprun.html">
+</div>
 
 In case the leaflet map does not appear, you may view it on this link: http://www.rpubs.com/DocOfi/369472
 
