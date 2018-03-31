@@ -13,7 +13,9 @@ output:
 
 
 
-# Synopsis
+# Earthquakes 1980-2018, Philippines
+
+## Synopsis
 
 After making the project Hurricanes 1999-2010, Philippines, I was left wondering whether the island of Mindanao was not only blessed with having fewer storms compared to the other 2 main islands of the Philippines, Luzon and Visayas, but also blessed with having fewer earthquake episodes in the past.  In this project, I will use the visualization tools I have learned to illustrate where earthquakes have occurred in the Philippines between 1980 - 2018. 
 
@@ -234,7 +236,7 @@ g + annotate("text",
 
 ![](index_files/figure-html/unnamed-chunk-7-1.png)<!-- -->
 
-It seems that the island of Palawan, on the far left, where the world famous resort El Nido is located does not experience the same amount of eartquake as the rest ot the islands.  Our data spans 38 years and contains 8,646 earthquake occurences which at first glance appears to be a good representative sample. However, we think of time in terms of a person's lifespan but in earth years that is quite short. I leave it up to you to explore this in greater detail.
+It seems that the island of Palawan, on the far left, where the world famous resort El Nido is located does not experience the same amount of earthquake as the rest ot the islands.  Our data spans 38 years and contains 8,646 earthquake occurences which at first glance appears to be a good representative sample. However, we think of time in terms of a person's lifespan but in earth years that is quite short. I leave it up to you to explore this in greater detail.
 
 Hope you enjoyed this short presentation. Suggestions and comments are welcome.
 
