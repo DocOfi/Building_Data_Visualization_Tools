@@ -1,0 +1,886 @@
+---
+title: "Plotting Natural Disasters"
+author: "Edmund Julian Ofilada"
+date: "February 26, 2018"
+output: 
+  html_document:
+        code_folding: hide
+        toc: true
+        toc_depth: 2
+        toc_float: true
+        keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = TRUE)
+```
+
+# Synopsis
+
+I just finished the awesome Building Data Visualization Course offeered by Coursera and I needed to find a project to practice the new skills I have learned. I picked for my topic natural disasters and I wanted to use data about the Philippines. In 2013, Within a span of three weeks, the Philippines was hit by two natural calamities that resulted in loss of lives and destruction of property. It also probably cost one man's ambition of the presidency and catapulted another from obscurity to prominence.
+
+```{r}
+library(leaflet)
+library(dplyr)
+library(tidyr)
+library(lubridate)
+library(choroplethr)
+library(ggplot2)
+library(ggmap)
+library(leaflet.extras)
+library(htmlwidgets)
+library(tigris)
+```
+
+<br>
+
+## Downloading the data
+
+<br>
+
+The data we will be using comes from the [US Geological Survey](https://earthquake.usgs.gov/). They have a web service where you can input certain parameters and obtain the data you need. To use the service, click on this link https://earthquake.usgs.gov/earthquakes/search/
+
+In keeping with Dr. Peng's principle of making a presentation reproducible, the parameters I used for searching for the data are the following:
+
+|  Parameter   |    Value             |
+| :----------: | :--------------------|
+|  Magnitude   | 2.5+                 |
+|  Start(UTC)  | 2013-10-15 00:00:00  |
+|   End(UTC)   | 2013-10-18 00:00:00  |
+
+I also drew a rectangle on the Visayas area of the philippine map but I wasn't able to log the longitude and latitude values created. I clicked on *Search* and downloaded the *.csv* file output of the search. In a future example, i will try using the USGS application programming interfaces (API).
+ 
+
+```{r}
+### make sure query.csv file is in your working directory
+
+Oct_2015_Quake <- read.csv("query.csv",               ### read in query.csv in R and assign to R object Oct_2015_Quake
+                           stringsAsFactors = FALSE)  ### read factors as characters
+Oct_2015_Quake %>% select(time,                       ### select the variables time, latitude, longitude
+                          latitude,                   ### mag, and place
+                          longitude,
+                          mag, place) %>%
+        glimpse()                                     ### see data strcuture
+```
+
+Each row in the dataset contain a recorded earthquake and each variable describes the earthquake in terms of time, location, magnitude and other parameters. Since I am only interested in the three variables i just enumerated I will not bother mentioning the other variables included in the downloaded file.
+ 
+ 
+## Tidying data
+
+we see the time variable is read as a string of charactrers. We will transform it to a POSIXct object so we can use it in case we need to denote the time interval between recorded earthquakes. Furthermore, the data uses UTC or Coordinated Universal Time.  UTC is the time standard for which the world regulates clocks and time. Philippine Standard Time (PST) is eight hours ahead of UTC. Since R does not recognize `PST` as a time zone, we will use `Asia/Taipei` instead.
+
+We will also create another variable concatenating the magnitude of the earthquake and its location.
+
+```{r}
+Oct_2015_Quake <- Oct_2015_Quake %>%                         ### Take the R object we created Oct_2015_Quake
+        mutate(date_time = ymd_hms(time,                     ### create new variable from time of class POSIXct
+                                   tz = "Asia/Taipei")) %>%  ### Convert from UTC to Asia/Taipei time zone
+        mutate(date = date(date_time),                       ### create date variable
+               hr = hour(date_time),                         ### create hour variable
+               mins = minute(date_time),                     ### create minutes variable
+               secs = second(date_time)) %>%                 ### create seconds varaible
+        select(date_time,                                    ### selct only the following variables: latitude.
+               latitude,                                     ### longitude, mag, place, date, hr, mins, secs
+               longitude,
+               mag,
+               place,
+               date,
+               hr,
+               mins,
+               secs)
+
+Oct_2015_Quake$place <- gsub(", Philippines",                ### remove delete ", Philippines" in all rows of 
+                             "", Oct_2015_Quake$place)       ### variable Oct_2015$place
+
+Oct_2015_Quake <- Oct_2015_Quake %>%                         ### take R object Oct_2015_Quake
+        mutate(mag_loc = paste0(mag,                         ### create new variable mag_loc by combining
+                                "Magnitude ",                ### the varaible mag, the strin Magnitude and
+                                place))                      ### the variable place
+
+max_mag <- Oct_2015_Quake %>%                                ### take R object Oct_2015_Quake
+        dplyr::filter(mag == max(mag))                       ### extract row with highest magnitude earthquake
+
+Oct_2015_Quake %>% select(date_time,                         ### select the following variables and show the
+                          latitude,                          ### first six rows
+                          longitude,
+                          mag,
+                          place,
+                          mag_loc) %>%
+        head()
+```
+
+<br>
+
+Now, we are ready to plot the data.
+
+# Philippine Map
+
+On October 15, 2013, tuesday 8:32 pm local time, the Philipines was rocked by a 7.1 M earthquake.
+
+```{r philmap}
+bohol <- leaflet() %>%                    ### initialize leaflet to create map of Bohol
+        setView(lng = 124.1167,           ### set arguments for longitude, latitude, and zoom
+                lat =  9.8796,
+                zoom = 4)
+bohol %>%                                                    ### take map of Bohol
+        addTiles() %>%                                       ### add tiles
+        addProviderTiles("Thunderforest.TransportDark") %>%  ### specify type of map
+        addPulseMarkers(                                     ### add pulsing marker and specif
+    lng = max_mag$longitude,                                 ### longitude  
+    lat = max_mag$latitude,                                  ### and latitude of pulsing marker 
+    label='7.1 mag',                                         ### specify label
+    labelOptions = labelOptions(noHide = TRUE,               ### specify labe options
+                                textsize = "15px"),
+    icon = makePulseIcon(heartbeat = 0.5))                   ### specify frequency of pulsing
+```
+
+<br>
+
+## Visayas Map
+
+The earthquake occurred in a group of islands called Visayas in the Philippines. The epicenter was located in the island of Bohol 4 Km SE of the town of Sagbayan.
+
+```{r visayasmap2}
+bohol2 <- leaflet() %>%
+        setView(lng = 124.1167, 
+                lat =  9.8796,
+                zoom = 6)
+bohol2 %>%
+        addTiles() %>%
+        addProviderTiles("Esri.NatGeoWorldMap") %>%
+        addPopups(lng = max_mag$longitude,
+                  lat = max_mag$latitude,
+                  popup = "4km SE of Sagbayan, Bohol",
+                  options = popupOptions(closeButton = FALSE))
+```
+
+<br>
+
+## Bohol map
+
+After the initial tremor on tuesday, 82 aftershocks that are greater than 2.5 M have been recorded as of thursday, Oct 17.
+
+```{r}
+icon.pop <- pulseIcons(color = ifelse(Oct_2015_Quake$mag > 7,
+                                      'red', ifelse(Oct_2015_Quake$mag < 5,
+                                      'palevioletred', 'violetred')),
+                       heartbeat = ifelse(Oct_2015_Quake$mag > 7,
+                                          0.4, ifelse(Oct_2015_Quake$mag < 5,
+                                      1, 0.8)),
+                       iconSize = ifelse(Oct_2015_Quake$mag > 7,
+                                          12, ifelse(Oct_2015_Quake$mag < 5,
+                                      4, 8)))
+bohol3 <- leaflet() %>%
+        setView(lng = 124.1167, 
+                lat =  9.8796,
+                zoom = 9)
+
+bohol3 %>%
+        addTiles() %>%
+        addProviderTiles("OpenStreetMap.Mapnik") %>%
+        addPulseMarkers(
+    lng = Oct_2015_Quake$longitude, lat = Oct_2015_Quake$latitude,
+    label= Oct_2015_Quake$place,
+    icon = icon.pop)
+```
+
+<br>
+
+# Casualties
+
+```{r}
+plot_df2 <- read.csv("casualties.csv", stringsAsFactors = FALSE)
+cnames <- read.csv("bohol_town_names.csv", stringsAsFactors = FALSE)
+ggplot() +
+  geom_polygon(data = plot_df2, 
+               aes(x = long,
+                   y = lat,
+                   group = group,
+                   fill = casualties),
+               color = "black",
+               size = 0.25) + 
+  coord_map()+
+  scale_fill_gradient(name="deaths",
+                      limits=c(0,70),
+                      low="white",
+                      high="red") +
+  labs(title="Earthquake Casualties") +
+  geom_text(data=cnames,
+            aes(long,
+                lat,
+                label = NAME_2),
+            size=3,
+            fontface="bold") 
+```
+
+By November 4, 2013, two weeks after the 7.1 M earthquake, The [National Disaster Risk Reduction and Management Council](http://www.ndrrmc.gov.ph/) reported a total of 227 deaths in the provinces of Bohol (214), Cebu (12), and Siquijor (1). 
+
+<br>
+
+# Injuries
+
+```{r}
+plot_df3 <- read.csv("injured.csv", stringsAsFactors = FALSE)
+ggplot() +
+  geom_polygon(data = plot_df3, 
+               aes(x = long,
+                   y = lat,
+                   group = group,
+                   fill = injured),
+               color = "black",
+               size = 0.25) + 
+  coord_map()+
+  scale_fill_gradient(name="injured",
+                      limits=c(0,151),
+                      low="white",
+                      high="red") +
+  labs(title="Earthquake Injuries") +
+  geom_text(data=cnames,
+            aes(long,
+                lat,
+                label = NAME_2),
+            size=3,
+            fontface="bold")
+  
+```
+
+**A total of 976 individuals were injured, 967 were from Bohol**.
+
+<br>
+
+# Totally Damaged Houses in Bohol
+
+```{r}
+plot_df4 <- read.csv("totally_damaged_houses.csv", stringsAsFactors = FALSE)
+ggplot() +
+  geom_polygon(data = plot_df4, 
+               aes(x = long,
+                   y = lat,
+                   group = group,
+                   fill = tot_damaged),
+               color = "black",
+               size = 0.25) + 
+  coord_map()+
+  scale_fill_gradient(name="Totally \ndamaged \n houses",
+                      limits=c(0,2130),
+                      low="white",
+                      high="brown") +
+  labs(title="Totally Damaged Houses") +
+  geom_text(data=cnames,
+            aes(long,
+                lat,
+                label = NAME_2),
+            size=3,
+            fontface="bold") 
+```
+
+** 78,229 houses were damaged (15,933 totally / 62,296 partially) in Bohol, Cebu, Negros Occidental, Iloilo, Siquijor and Guimaras**.
+
+- 41 bridges were damaged in Bohol, Cebu, and Negors Occidental.
+
+- A total of PHP 2,257,337,182.90 worth of Public infrastructure were damaged.
+
+```{r, eval=FALSE}
+ hist(Oct_2015_Quake$mag)
+```
+
+<br>
+
+# Super Typhoon Haiyan
+
+Barely three weeks after the earthquake, super typhoon Haiyan or better known locally as typhoon Yolanda made land fall on the town of Guiuan, Eastern Samar. 
+
+## Reading in Typhoon Data
+
+Data for typhoon haiyan came from the National Oceanic and Atmospheric Administration (NOAA). The International Best Track Archive for Climate Stewardship (IBTrACS) is a global set of historical tropical cyclones. The data is derived from contributions from various world wide agencies tasked to monitor climate and weather. Description of the data and instructions for downloading the data are available at https://www.ncdc.noaa.gov/ibtracs/index.php?name=ibtracs-data-access
+
+The storm data for the year 2013 was downloaded from this [ftp site](ftp://eclipse.ncdc.noaa.gov/pub/ibtracs/v03r10/all/csv/year/Year.2013.ibtracs_all.v03r10.csv). The variable names contain prefixes to denote the institute/agency that contributed the data. For our purposes we will use the data from the Joint typhoon Warning System (JWTC).
+
+```{r}
+ibtracks2013 <- read.csv("Year.2013.ibtracs_all.v03r10.csv", ### take the downloaded file from NOAA and read
+                         skip = 1,                           ### content but skip firsst row
+                         stringsAsFactors = FALSE,           ### read factors as strings or characters
+                         na.strings = "-999.0")              ### specify code for missing values
+
+var_names <- c("Name", "ISO_time")                           ### create var names containing Name and ISO_time
+
+haiyan <- ibtracks2013 %>%                                   ### take the r object ibtracks2013 we created
+        filter(Name == "HAIYAN") %>%                         ### filter typhoon haiyan
+        select(var_names, starts_with("jtwc"))               ### select varaibles Name, ISO_time, and all variables beginning with the string jtwc
+
+jtwc <- haiyan %>%                                           ### take r object haiyan and
+        select(starts_with("jtwc"))                          ### select only variables beginning with jtwc
+
+non_jtwc <- haiyan %>%                                       ### take r object haiyan and
+        select(1:4)                                          ### select only variables Name, ISO_time, jtwc_sh_lat
+
+non_jtwc$ISO_time <- ymd_hms(non_jtwc$ISO_time)            ### convert ISO_time to POSIXct object         
+
+jtwc_df <- as.data.frame(rbind(sapply(jtwc, as.numeric)))    ### convert all variables in jtwc_df to numeric and row bind
+
+var_empty <- sapply(jtwc_df, function(x) sum(is.na(x)))      ### check which variables are empty/ all missing data
+
+index <- var_empty == 38                                     ### create index which variables contain only NAs 
+
+plot_df <-cbind(non_jtwc, jtwc_df[, !index])                 ### use index to remove varaibles that contain only NAs 
+
+plot_df <- plot_df %>%                                       ### remove last row
+        select(-starts_with("jtwc_sh")) %>% 
+        slice(1:37)
+
+plot_df                                                      ### show first 10 rows of data
+```
+
+<br>
+
+## Description of the Variables
+
+<br>
+
+Below is a brief description of the data from the Joint Typhoon Warning Center (JTWC).
+
+|  Argument            |         Description                                |
+| :------------------: | :--------------------------------------------------|
+|    Name              | Storm name                                         |
+|   ISO_time           | Date and time in ISO format: YYYY-MM-DD HH:MM:SS   |
+| jtwc_wp_lat          | Latitude (Degrees North)                           |
+| jtwc_wp_lon          | Longitude (degrees East)                           |
+| jtwc_wp_wind         | Sustained wind speed in knots: 0 through 300       |
+| jtwc_wp_pres         | Minimum sea level pressure, 1 through 1100 MB.     |
+| jtwc_.._rmw          | radius of maximum wind                             |
+| jtwc_.._poci         | pressure of the  outer most closed isobar          |
+| jtwc_.._roci         | radius of the outer most  closed  isobar           |
+| jtwc_.._eye          | eye diameter, 0 through 999 nm.                    |
+| jtwc_.._wrad34_rad1  | northeast radii of the storm's 34 knot winds in nautical miles|
+| jtwc_.._wrad34_rad2  | southeast radii of the storm's 34 knot winds in nautical miles|
+| jtwc_.._wrad34_rad3  | southwest radii of the storm's 34 knot winds in nautical miles|
+| jtwc_.._wrad34_rad4  | northwest radii of the storm's 34 knot winds in nautical miles|
+| jtwc_.._wrad50_rad1  | northeast radii of the storm's 50 knot winds in nautical miles|
+| jtwc_.._wrad50_rad2  | southeast radii of the storm's 50 knot winds in nautical miles|
+| jtwc_.._wrad50_rad3  | southwest radii of the storm's 50 knot winds in nautical miles|
+| jtwc_.._wrad50_rad4  | northwest radii of the storm's 50 knot winds in nautical miles|
+| jtwc_.._wrad64_rad1  | northeast radii of the storm's 64 knot winds in nautical miles|
+| jtwc_.._wrad64_rad2  | southeast radii of the storm's 64 knot winds in nautical miles|
+| jtwc_.._wrad64_rad3  | southwest radii of the storm's 64 knot winds in nautical miles|
+| jtwc_.._wrad64_rad4  | northwest radii of the storm's 64 knot winds in nautical miles|
+
+<br>
+
+## Tidying the data
+
+<br>
+
+We will need to create shorter and more decriptive names to our variables and organize them in a way that will make plotting easier.
+
+```{r}
+names(plot_df) <- c("name", "date_time", "latitude",       ### change variable names to more meaningful names
+                    "longitude", "wind", "pressure",
+                    "max_wind_rad", "poci", "roci",
+                    "eye_diameter", "34_ne", "34_se",
+                    "34_sw", "34_nw", "50_ne",
+                    "50_se", "50_sw", "50_nw",
+                    "64_ne", "64_se", "64_sw", "64_nw")
+
+plot_df <- plot_df %>% select(name,                       ### select variables name, date_time, latitude, longitude
+                              date_time,                  ### and variables 11 to 22
+                              latitude,
+                              longitude,
+                              11:22) %>%
+        gather(key = wind_spd_dir,                        ### gather all varaible to column wind_spd_dir except variables
+               value = value,                             ### name, date_time, latitude, longitude
+               -name,
+               -date_time,
+               -latitude,
+               -longitude,
+               na.rm = TRUE) %>%                          ### don't include NAs or missing values
+        separate(col = wind_spd_dir,                      ### separate wind_spd_dir to wind_spd and dir
+                 c("wind_spd", "dir")) %>%
+        spread(dir, value) %>%
+        arrange(date_time,                                ### arrange rows according to date_time, latitude, 
+                latitude,                                 ### and longitude
+                longitude)
+
+plot_df$wind_spd <- as.factor(plot_df$wind_spd)           ### convert variable wind_spd to factor
+
+nov4AM6 <-plot_df %>% slice(25:27)                        ### create dataframe with only row 25:27
+nov5AM6 <-plot_df %>% slice(37:39)
+nov6AM6 <-plot_df %>% slice(49:51)
+nov7AM6 <-plot_df %>% slice(61:63)
+nov8AM0 <-plot_df %>% slice(79:81)
+nov8bohol <-plot_df %>% slice(70:72)
+nov9AM18 <-plot_df %>% slice(91:93)
+nov10AM12 <-plot_df %>% slice(100:102)
+nov11AM6 <-plot_df %>% slice(109:111)
+
+nov8bohol
+```
+                
+For this part, I will be plotting the data using the geom from the Building Data Visulaization Course I just finished. The data is organized into a dataframe consisting of three rows. Each row contains the wind speed (35, 50 and 64 knots) in which the data is reported for a unique latitude and longitude location. Each row also contains the radius of the wind speed in 4 directions (northeast, southeast, southwest and northwest). 
+
+<br>
+
+```{r}
+### R code to create geom_hurricane
+
+GeomHurricane <- ggplot2::ggproto(
+        `_class` = "GeomHurricane",          ### name of new geom
+        `_inherit` = Geom,                   ### class of R object
+        required_aes = c("x",                ### argument for lingitude
+                         "y",                ### argument for latitude
+                         "r_ne",             ### argument for NE wind radius
+                         "r_se",             ### argument for SE wind radius
+                         "r_sw",             ### argument for SW wind radius
+                         "r_nw"),            ### argument for NW wind radius
+        default_aes = aes(colour = "NA",     ### default value for colour argument
+                          fill = "NA",       ### default value for fill argument
+                          linetype = 1,      ### default value for linetype argument
+                          alpha = 0.8,       ### default value for alpha argument
+                          scale_radii = 1),  ### default value for scale_radii argument
+        draw_key = draw_key_polygon,         ### setting draw_key_polygon to draw legend
+        draw_group = function(data,                 ### selecting draw_group over draw_panel
+                              panel_scales,         ### elements are grouped according to wind_speed
+                              coord){              ### data describing coordinates
+                center_pt <- c(data[1, ]$x,         ### coordinates for longitude
+                               data[1, ]$y)         ### coordinates for latitude
+                color <- data[1, ]$colour           ### selecting colour from first row
+                fill <- data[1, ]$fill              ### selecting fill from first row
+                alpha <- data[1, ]$alpha            ### selecting alpha from first row
+                scale_radii = data[1, ]$scale_radii ### selecting scale_radii from first row
+                ne_qtr_circ <- geosphere::destPoint(p = center_pt, ### setting center of arc
+                                                    b = 0:90,      ### setting points for arc
+                                                    d = data[1, ]$r_ne * 1852 * scale_radii) ### setting radius
+                ### converted nautical miles to meters by multiplying aby 1852 and to map scale by scale_radii
+                
+                ne_df <- data.frame(x = c(ne_qtr_circ[, "lon"],
+                                          center_pt[1]),
+                                    y = c(ne_qtr_circ[, "lat"],
+                                          center_pt[2])
+                )
+                se_qtr_circ <- geosphere::destPoint(p = center_pt, ### setting center of arc
+                                                    b = 90:180,      ### setting points for arc
+                                                    d = data[1, ]$r_se * 1852 * scale_radii) ### setting radius
+                ### converted nautical miles to meters by multiplying aby 1852 and to map scale by scale_radii
+                
+                se_df <- data.frame(x = c(se_qtr_circ[, "lon"],
+                                          center_pt[1]),
+                                    y = c(se_qtr_circ[, "lat"],
+                                          center_pt[2])
+                )
+                
+                nw_qtr_circ <- geosphere::destPoint(p = center_pt, ### setting center of arc
+                                                    b = 270:360,      ### setting points for arc
+                                                    d = data[1, ]$r_nw * 1852 * scale_radii) ### setting radius
+                ### converted nautical miles to meters by multiplying aby 1852 and to map scale by scale_radii
+                
+                nw_df <- data.frame(x = c(nw_qtr_circ[, "lon"],
+                                          center_pt[1]),
+                                    y = c(nw_qtr_circ[, "lat"],
+                                          center_pt[2])
+                )
+                
+                sw_qtr_circ <- geosphere::destPoint(p = center_pt, ### setting center of arc
+                                                    b = 180:270,      ### setting points for arc
+                                                    d = data[1, ]$r_sw * 1852 * scale_radii) ### setting radius
+                ### converted nautical miles to meters by multiplying aby 1852 and to map scale by scale_radii
+                
+                sw_df <- data.frame(x = c(sw_qtr_circ[, "lon"],
+                                          center_pt[1]),
+                                    y = c(sw_qtr_circ[, "lat"],
+                                          center_pt[2])
+                )
+                
+                all_df <- rbind(ne_df, se_df, nw_df, sw_df)
+                coords <- coord$transform(all_df,
+                                          panel_scales)
+                
+                grid::polygonGrob(x = coords$x,
+                                  y = coords$y,
+                                  gp = grid::gpar(col = color,
+                                                  fill = fill,
+                                                  alpha =alpha))
+        }
+                          
+)
+
+geom_hurricane <- function(mapping = NULL,
+                           data = NULL, 
+                           stat = "identity",
+                           position = "identity",
+                           na.rm = FALSE,
+                           show.legend = NA,
+                           inherit.aes = TRUE,
+                           ...) {
+        ggplot2::layer(
+                geom = GeomHurricane,
+                mapping = mapping,
+                data = data,
+                stat = stat,
+                position = position,
+                show.legend = show.legend,
+                inherit.aes = inherit.aes,
+                params = list(na.rm = na.rm,
+                              ...)
+        )
+}
+```
+
+
+# Plotting Hurricane Haiyan
+
+Typhoon Haiyan was spawned east-southeast of Pohnpei Island of the Federated States of Micronesia.
+
+- **November 4**, the Japan Meteorological Agency classified the weather event as a tropical storm after its winds reached a measured speed of 40 miles (64 km) per hour and assigned the name Haiyan,
+
+- **November 5**, the storm reached typhoon strength With winds increasing to 75 miles (120 km) per hour.
+
+- **November 6**, Haiyan intensified into a super typhoon With winds increasing to 178 miles (287 km) per hour. 
+
+- **Novemeber 7**, 5 hrs before landfall, Haiyan's intensity peaked with 1-minute sustained winds of 195. The wind speed at landfall of 195 mph is the strongest tropical cyclone winds to impact land, surpassing Hurricane Camille, which hit the U.S. state of Mississippi in 1969 and had winds of 190 mph. 
+
+- **November 8**, 4:40 am local time, Super Typhoon Haiyan made landfall at Guiuan, eastern Samar. 
+
+
+```{r}
+map_plot <- get_map(c(lon = 129,                       ###get map from google
+                      lat = 10.2),                     ### specify arguments for longitude, latitude, zoom
+                    zoom = 4,                          ### and maptype
+                    maptype = "toner-background") 
+
+chron <- map_plot %>%                                  ### plot hurricane using geom_hurricane function
+  ggmap(extent = "device") +
+  geom_hurricane(data = nov4AM6,
+                 aes(x = longitude,
+                     y = latitude, 
+                     r_ne = ne,
+                     r_se = se,
+                     r_nw = nw,
+                     r_sw = sw,
+                     color = wind_spd,
+                     fill = wind_spd),
+                 scale_radii = 1) + 
+  geom_hurricane(data = nov5AM6,
+                 aes(x = longitude,
+                     y = latitude, 
+                     r_ne = ne,
+                     r_se = se,
+                     r_nw = nw,
+                     r_sw = sw,
+                     color = wind_spd,
+                     fill = wind_spd),
+                 scale_radii = 1) + 
+  geom_hurricane(data = nov6AM6,
+                 aes(x = longitude,
+                     y = latitude, 
+                     r_ne = ne,
+                     r_se = se,
+                     r_nw = nw,
+                     r_sw = sw,
+                     color = wind_spd,
+                     fill = wind_spd),
+                 scale_radii = 1) + 
+  geom_hurricane(data = nov7AM6,
+                 aes(x = longitude,
+                     y = latitude, 
+                     r_ne = ne,
+                     r_se = se,
+                     r_nw = nw,
+                     r_sw = sw,
+                     color = wind_spd,
+                     fill = wind_spd),
+                 scale_radii = 1) + 
+  geom_hurricane(data = nov8AM0,
+                 aes(x = longitude,
+                     y = latitude, 
+                     r_ne = ne,
+                     r_se = se,
+                     r_nw = nw,
+                     r_sw = sw,
+                     color = wind_spd,
+                     fill = wind_spd),
+                 scale_radii = 1) + 
+  geom_hurricane(data = nov9AM18,
+                 aes(x = longitude,
+                     y = latitude, 
+                     r_ne = ne,
+                     r_se = se,
+                     r_nw = nw,
+                     r_sw = sw,
+                     color = wind_spd,
+                     fill = wind_spd),
+                 scale_radii = 1) + 
+  geom_hurricane(data = nov10AM12,
+                 aes(x = longitude,
+                     y = latitude, 
+                     r_ne = ne,
+                     r_se = se,
+                     r_nw = nw,
+                     r_sw = sw,
+                     color = wind_spd,
+                     fill = wind_spd),
+                 scale_radii = 1) + 
+  geom_hurricane(data = nov11AM6,
+                 aes(x = longitude,
+                     y = latitude, 
+                     r_ne = ne,
+                     r_se = se,
+                     r_nw = nw,
+                     r_sw = sw,
+                     color = wind_spd,
+                     fill = wind_spd),
+                 scale_radii = 1) + 
+  geom_hurricane(data = nov8bohol,
+                 aes(x = longitude,
+                     y = latitude, 
+                     r_ne = ne,
+                     r_se = se,
+                     r_nw = nw,
+                     r_sw = sw,
+                     color = wind_spd,
+                     fill = wind_spd),
+                 scale_radii = 1) + 
+  scale_color_manual(name = "Wind speed (kts)", 
+                     values = c("red",
+                                "orange",
+                                "yellow")) + 
+  scale_fill_manual(name = "Wind speed (kts)", 
+                    values = c("red",
+                               "orange",
+                               "yellow")) +
+  guides(col=guide_legend(title="Wind\nspeed\n(kts)"))
+
+chron
+```
+
+- **Novemeber 9**, 3:30 pm local time, Super typhoon Haiyan was outside the Philippine Area of Responsibility.
+
+- **November 10**, Haiyan struck land once again near Ha Long Bay in Vietnam's Quang Ninh province at 5:00 am on November 10. By then the storm's winds had weakened to less than 85 miles (138 km) per hour at landfall.
+
+- **November 11**, It turned northward into China's Zhuang Autonomous Region of Guangxi by November 11, where it further weakened and was downgraded to a tropical storm.
+
+<br>
+
+## Hurricane Haiyan over Bohol, Samar, and Leyte
+
+<br>
+
+Barely 3 weeks after the 7.1 M earthquake struck at Sagabayan, Bohol, Super Typhoon Haiyan made landfall at the town of Guiuan, Eastern Samar. The red, orange, and yellow area indicating wind speed of 34, 50, and 64 knots winds (63, 93, 118 km/hr).
+
+```{r}
+leyte_casualties <- read.csv("leyte_casualties.csv")
+phil_map <- readRDS("PHL_adm2.rds")                           ###read shape files for Philippine Map
+bohol_map <- phil_map[phil_map$NAME_1 == "Bohol", ]           ### filter only map for Bohol
+bohol_mapdf <- fortify(bohol_map)                             ### use fortify function so you can use map in ggplot
+
+sagbayan_map <- phil_map[phil_map$NAME_2 == "Sagbayan", ]     ### filter map only for sagbayan
+sagbayan_mapdf <- fortify(sagbayan_map)                       ### use fortify function so you can use map in ggplot
+
+Esamar_map <- phil_map[phil_map$NAME_1 == "Eastern Samar", ]
+Esamar_mapdf <- fortify(Esamar_map)                        
+
+
+guiuan_map <- phil_map[phil_map$NAME_2 == "Guiuan", ]
+guiuan_mapdf <- fortify(guiuan_map)
+
+dist <- mapdist("Sagbayan, Bohol", "Guiuan, Samar")
+
+guiuan <- geocode("Guiuan, Samar")
+
+towns <- data.frame(list(places = c("Guiuan",     ### create dataframe for labels for Guiuan and sagbayan
+                                    "Sagbayan",
+                                    "Tacloban\nCity"),
+                         lon = c(125.9245,
+                                 123.9975,
+                                 124.7644),
+                         lat = c(10.53525,
+                                 10.09920,
+                                 11.11317)))
+prov <- data.frame(list(places = c("East Samar",  ### create dataframe for labels for East Samar and Bohol
+                                   "Bohol"),
+                        lon = c(125.9950,
+                                124.1435),
+                        lat = c(11.758273,
+                                9.449991)))
+
+
+leyte_map <- phil_map[phil_map$NAME_1 == "Leyte", ]           ### filter only map for Leyte
+leyte_mapdf <- fortify(leyte_map, region = "ID_1")                             ### use fortify function so you can use map in ggplot
+
+tacloban_map <- phil_map[phil_map$NAME_2 == "Tacloban City", ]     ### filter map only for Tacloban
+tacloban_mapdf <- fortify(tacloban_map, region = "ID_2")                       ### use fortify function so you can use map in ggplot
+
+
+leyte_towns_merged <- geo_join(leyte_map, leyte_casualties, "NAME_2", "town")
+
+
+map_plot <- get_map(c(lon = 124.7,                  ### get map from ggogle map
+                      lat = 11),                    ### specify arguments for longitude, latitude,zoom
+                    zoom = 8,                       ### and maptype
+                    maptype = "toner-background") 
+
+covered <- map_plot %>%                             ### use map we created earlier
+  ggmap(extent = "device") +                        ### specify border of map
+  geom_hurricane(data = nov8bohol,                  ### specify dataframe to use
+                 aes(x = longitude,                 ### specify argument for longitude
+                     y = latitude,                  ### specify argument for latitude
+                     r_ne = ne,                     ### specify northeast radius
+                     r_se = se,                     ### specify southeat radius
+                     r_nw = nw,                     ### specify northwest radius
+                     r_sw = sw,                     ### specify southwest radius
+                     color = wind_spd,              ### specify argument for color
+                     fill = wind_spd),              ### specify argument for wind_spd
+                 scale_radii = 1) +                 ### specify what percent of radii will be shown
+  scale_color_manual(name = "Wind speed (kts)",     ### create legend
+                     values = c("red",
+                                "orange",
+                                "yellow")) + 
+  scale_fill_manual(name = "Wind speed (kts)", 
+                    values = c("red",
+                               "orange",
+                               "yellow")) +
+        geom_polygon(data = bohol_mapdf,            ### create map of bohol
+                     aes(x = long,
+                         y = lat,
+                         group = group)) +
+        geom_polygon(data = sagbayan_mapdf,         ### create map of sagbayan and color it green
+                     aes(x =long,
+                         y = lat,
+                         group = group),
+                     fill = "green") +
+        geom_point(data = max_mag,                  ### mark epicenter of 7.1 M earthquake
+                   aes(x= longitude,
+                       y = latitude),
+                   color = "blue", size = 2) +
+        geom_polygon(data = Esamar_mapdf,           ### create map of eastern samar
+                     aes(x= long,
+                         y = lat,
+                         group = group)) +
+        geom_polygon(data = guiuan_mapdf,           ### create map of guiuan and color it green
+                     aes(x = long,
+                         y = lat,
+                         group = group),
+                     fill = "green") +
+        geom_polygon(data = leyte_mapdf,           ### create map of eastern samar
+                     aes(x= long,
+                         y = lat,
+                         group = group)) +
+        geom_polygon(data = tacloban_mapdf,           ### create map of guiuan and color it green
+                     aes(x = long,
+                         y = lat,
+                         group = group),
+                     fill = "green") +
+        geom_text(data = prov,                      ### create labels for Eastern samar and Bohol
+                  aes(x = lon,
+                      y = lat,
+                      label = places),
+                  color = "gray7") +
+        geom_text(data = towns,                     ### create labels for guiuan and sagbayan
+                  aes(x = lon,
+                      y = lat,
+                      label = places),
+                  color = "green") +
+        guides(col=guide_legend(title="Wind\nspeed\n(kts)"))
+
+covered
+```
+
+# Satellite image
+
+Satellite image showing Haiyan as it made landfall.
+
+<img width="280" height="158" src="https://img.washingtonpost.com/blogs/capital-weather-gang/files/2013/11/BYgJhUsCEAEI1Wb.png">
+
+By November 9, 2013, The [National Disaster Risk Reduction and Management Council](http://www.ndrrmc.gov.ph/) reported:
+
+- a total of 6300 reported deaths, 28,688 injured and 1,062 are still missing.
+
+The hardest hit was the island of Leyte. Tacloban city suffered the greatest number of casualties shown on the map as dark green.
+To see the number of death and injured in each town in Leyte, click on the areas between the administrative boundaries. Clicking on the + or - sign allows for zooming in or out.
+
+# Map of fatalities and injured
+
+```{r}
+# Creating a color palette based on the number range in the total column
+
+pal <- colorNumeric("Greens", domain = leyte_towns_merged$dead)
+# Setting up the pop up text
+popup_sb <- paste0(as.character(leyte_towns_merged$town), ": ", as.character(leyte_towns_merged$dead), " Casualties: ", as.character(leyte_towns_merged$unidentified), " unidentified")
+
+# Mapping it with the new tiles CartoDB.Positron
+leaflet() %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  setView(124.7001, 11.08302, zoom = 9) %>% 
+  addPolygons(data = leyte_towns_merged , 
+              fillColor = ~pal(leyte_towns_merged$dead), 
+              fillOpacity = 0.7, 
+              weight = 0.2, 
+              smoothFactor = 0.2, 
+              popup = ~popup_sb) %>%
+  addLegend(pal = pal, 
+            values = leyte_towns_merged$dead, 
+            position = "bottomright", 
+            title = "Casualties")
+```
+
+Looking at the high numbers of unidentified fatalities, one can't help but wonder if whole families and neigborhoods perished leaving no one to identify the dead.
+
+- A total of 3,424,593 families / 16,078,181 individuals were reportedly affected in 12,139 Barangays, 591 Municipalities and 57 Cities of Region IV-A, IV-B, V, VI, VII, VIII, X, XI and CARAGA.
+
+- 1, 140,332 houses were damaged (550,928 totally / 589,404 partially) 
+
+- Total cost of damage was pegged at PHP 95,483,133,070.67.
+
+- Miraculously, there was only 1 fatality from the island of Bohol.
+
+The Aquino administration was blasted even by the international media as Yolanda highlighted the government's weak disaster response efforts after relief aid failed to immediately reach the affected areas. 
+
+Super Typhoon 'Yolanda' and the Bohol Earthquake
+Rosalinda L. Orosa (The Philippine Star) - December 20, 2013 - 12:00am 
+https://www.philstar.com/
+
+2016 was an election year and the issue of the recovery and rebuilding of the areas affected by the earthquake and typhoon Yolanda became a major issue which affected the ability of then incumbent President Noynoy Aquino to rally support for his annointed successor.
+
+# References
+
+Variable names
+ftp://eclipse.ncdc.noaa.gov/pub/ibtracs/v03r10/all/csv/README.column_names.ecsv
+
+Description of variable names
+ftp://eclipse.ncdc.noaa.gov/pub/ibtracs/v03r10/all/csv/README.csv
+
+International Best Track Archive for Climate Stewardship (IBTrACS) formats
+https://www.ncdc.noaa.gov/ibtracs/index.php?name=ibtracs-data-access
+https://www.ncdc.noaa.gov/ibtracs/index.php?name=ibtracs-data
+
+FAQ
+http://www.metoc.navy.mil/jtwc/?faq
+
+https://www.britannica.com/event/Super-Typhoon-Haiyan
+
+Global hydrology Resource center
+https://ghrc.nsstc.nasa.gov/storms/services.shtml
+
+http://www.ndrrmc.gov.ph/19-ndrrmc-disaster-archive/2657-2013-disaster-archives
+http://ndrrmc.gov.ph/attachments/article/1329/FINAL_REPORT_re_Effects_of_Typhoon_YOLANDA_(HAIYAN)_06-09NOV2013.pdf
+
+https://www.wmo.int/pages/prog/arep/wwrp/tmr/otherfileformats/documents/1_5.pdf
+
+Doyle Rice, [USA TODAY](https://www.usatoday.com/) Published 11:47 a.m. ET Nov. 7, 2013 | Updated 5:19 a.m. ET Nov. 8, 2013
+
+Typhoon Haiyan
+https://en.wikipedia.org/wiki/Typhoon_Haiyan
+
+# Many Thanks to:
+
+- [US Geological Survey](https://earthquake.usgs.gov/)
+- [Global Administrative Areas](http://www.gadm.org/)  http://www.gadm.org/download
+- https://www.coursera.org/learn/r-data-visualization
+- https://www.coursera.org/learn/data-products
+- http://leafletjs.com/
+- http://www.thunderforest.com/
+- http://openstreetmap.org/
+- National Oceanic and Atmospheric Administration
+
+
+
+

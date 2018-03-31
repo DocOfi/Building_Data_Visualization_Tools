@@ -218,7 +218,9 @@ leaflet(am_run) %>%
                 addPolylines(~longitude, ~latitude) 
 ```
 
-<iframe width="700" height="500" src="http://www.rpubs.com/DocOfi/369472">
+<iframe width="700" height="500" src="https://docofi.github.io/extras/www/maprun.html">
+
+In case the leaflet map does not appear, you may view it on this link: http://www.rpubs.com/DocOfi/369472
 
 <br>
 
