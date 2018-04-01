@@ -28,4 +28,19 @@ The README markdown document is displayed by default by GitHub whenever you visi
 
 Each of the folders in this repository contain the files for my  projects. You can read a brief description of each project below.
 
+- [Bohol_2013](/Building_Data_Visualization_Tools/Bohol_2013/)
+     - This project depicts the double tragedy that the province of Bohol faced during year 2013.
+     
+- [Plotting_Earthquake_Data_in_R](/Building_Data_Visualization_Tools/Plotting_Earthquake_Data_in_R/)
+     - Fun using R to plot earthquake data from the Philippines
+     
+- [Plotting_tcx_files](/Building_Data_Visualization_Tools/Plotting_tcx_files/)
+     - If you're using wearble body sensors, here's an alternative way to look at your data, including GPS data in case your device can track geopositions.
+     
+- [Storms_in_Mindanao](/Building_Data_Visualization_Tools/Storms_in_Mindanao/)
+     - Does Mindanao have fewer storms compare to the rest of the Philippines?
+     
+- [Earthquake_Philippines](https://docofi.github.io/Building_Data_Visualization_Tools/Earthquake_Philippines/)
+     - 38 years of earthquake history plotted using ggplot
+
 To download the content of this repository as a .zip file, click on the Download ZIP button. If you have a GitHub account, you can fork the content so you'll have a copy on your GitHub account.  

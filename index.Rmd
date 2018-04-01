@@ -2,7 +2,9 @@
 title: "Building_Data_Visualization_Tools"
 author: "Edmund Julian Ofilada"
 date: "March 30, 2018"
-output: html_document
+output: 
+  html_document:
+        keep_md: TRUE
 ---
 
 ```{r setup, include=FALSE}
@@ -46,5 +48,9 @@ You can click on the `index.md` file in each directory to display the file in ht
      
 - [Storms_in_Mindanao](/Building_Data_Visualization_Tools/Storms_in_Mindanao/)
      - Does Mindanao have fewer storms compare to the rest of the Philippines?
+     
+- [Earthquake_Philippines](https://docofi.github.io/Building_Data_Visualization_Tools/Earthquake_Philippines/)
+     - 38 years of earthquake history plotted using ggplot
+
 
 #### To download the content of this repository as a .zip file, click on this [link](/Building_Data_Visualization_Tools/archive/gh-pages.zip) or click on the Download ZIP button. If you have a GitHub account, you can fork the content so you'll have a copy on your GitHub account.  
