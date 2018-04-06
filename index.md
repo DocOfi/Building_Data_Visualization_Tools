@@ -52,5 +52,8 @@ You can click on the `index.md` file in each directory to display the file in ht
 
 - [National Oral Health Survey 2006](https://docofi.github.io/Building_Data_Visualization_Tools/NOHS/)
      - Mapping the DMFT and BMI results of the 2006 National Oral Health Survey
+     
+- [PhilGIS](https://docofi.github.io/Building_Data_Visualization_Tools/PhilGIS/)
+     - Initial exploration of the PhilGIS website. A treasure trove of data about the Philippines     
 
 #### To download the content of this repository as a .zip file, click on this [link](/Building_Data_Visualization_Tools/archive/gh-pages.zip) or click on the Download ZIP button. If you have a GitHub account, you can fork the content so you'll have a copy on your GitHub account.  
