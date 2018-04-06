@@ -1,0 +1,163 @@
+---
+title: "PhilGIS"
+author: "Edmund Julian Ofilada"
+date: "March 31, 2018"
+output: 
+  html_document:
+        keep_md: true
+        toc: true
+        toc_depth: 2
+        toc_float: true
+        code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Synopsis
+
+While browsing the internet for references for my project [Storms_in_Mindanao](https://docofi.github.io/Building_Data_Visualization_Tools/Storms_in_Mindanao/), I came across the wonderful [PhilGIS](http://philgis.org/) website. It's a treasure trove of data with which I can practice my skills in R and it's all about the Philippines. Join me as I explore the contents of the [PhilGIS](http://philgis.org/) website and create interesting plots of the data we find.
+
+# Load packages
+
+For some time now, I have been learning to use the package `mapview` to create plots using the data included in the package. `Mapview` was created by Tim Appelhans, Florian Detsch, Christoph Reudenbach, and Stefan Woellauer and can be found in CRAN. They have included several well made vignettes to demonstrate the wonderful functions that they have created. The vignettes are available in their [github](https://r-spatial.github.io/mapview/) repository.
+
+We will also be using the package `raster` to read the data we find in R. The package `raster` was created by Robert J. Hijman and is also available in CRAN. This package is considered a standard in R when it comes to geospatial data.
+
+```{r, warning=FALSE, message=FALSE}
+library(raster)
+library(mapview)
+```
+
+# Population and Demography
+
+The first data we will explore is a census data on Philippine population. The data can de downloaded as a zip file from the [PhilGIS](http://philgis.org/) website. I unzipped the file and placed the content in a folder in my directory called `pop_demog`. Let's take a look at the content of that folder.
+
+```{r}
+list.files("./pop_demog")
+```
+
+Notice that the files have the same names but different file extensions. These group of files comprises a shapefile.  It stores geographical information or spatial data consisting of points, polygons and shapes.
+
+- the .dbf file is a table that contains attribute information. I have used the `read.dbf` function from the package `foreign` to explore the content of this file and it will also open in a spreadsheet program like OpenOffice.
+
+- the .prj file contains the coordinate system information.
+
+- the .sbn  and .sbx file contains the spatial index file
+
+- the .shp file contains the feature geometry (points, lines, or polygons).
+
+- the .shp.xml file is geospatial metadata in XML format.
+
+- the .shx is another index file that stores the index of the featured geometry
+
+# Reading the file in R
+
+We read the file in R using the `shapefile` function from the `raster` package and save it in a R object called `phil_shp`.
+
+```{r, cache=TRUE}
+phil_shp <- shapefile("./pop_demog/PopulationDemog_w84.shp")
+str(phil_shp, 2)
+```
+
+We use the `str` function to view the structure of `phil_shp`. We see that is of class SpatialPolygonsDataFrame and contains 5 slots. 
+
+- the data slot contains the attributes or variables that describe the shapefiles. 
+- the polygons slot contains the list of shapesfrom the.shp file.
+
+- the plotOrder is the index file that tells the order in which the map is to be plotted.
+
+- the bbox contains the limits of the map in terms of latitude and longitude.
+
+- the proj4string contains the map projection or the coordinate reference system.
+
+The data slot can be accessed like so:
+
+```{r}
+head(phil_shp@data)
+```
+
+Shown above are the first 6 rows of the data.
+
+Enough of the technical stuff.  Let's see what the the data looks in a plot. I tried viewing the whole Philippine map but due to the size of the output, the program was running slow so I opted to view certain provinces. Click the tab on the left labelled code to see how to subset the island of Bohol from the R object `phil_shp`.
+
+# Map of Bohol
+
+We could show the whole map of the Philippines but because of the enormity of the data, it would take a long time to process and the interactive quality of the map will slow down. So we will explore the map of Bohol as an example
+
+```{r}
+ph2 <- phil_shp[!is.na(phil_shp$REGION),]        ### remove missing values
+bohol <- ph2[ph2$PROVINCE == "BOHOL",]           ### subset the province of Bohol
+mapview(bohol,                                   ### data we want to plot
+        color = "springgreen",                   ### color of the tiles
+        zcol = "POPDEN",                         ### variable we want to display on popup
+        burst = TRUE,                            ###provide index of data on the right
+        popup = popupTable(bohol,                 
+                           zcol = c("PROVINCE",  ### variables to display
+                                    "CITY_MUNI",
+                                    "POPDEN",
+                                    "POPNO")))
+```
+
+<br>
+
+The `mapview` function creates an interactive plot.  You can zoom in and out by clicking on the + or - sign on the top left. You can also move the map by clicking anywhere in the plot area, holding it and moving it to the direction you want to go.
+
+Click on a particular town/tile in Bohol and a popup table will appear showing the attributes for that town. Clicking on the population density index tab at the far right will zoom in to the particular town which has that particular population density value. the tabs are labelled with the values from the variable population density.
+
+The icon that looks like a stack of papers underneath the + and - signs allow you to choose the kind of back ground you'd like. Click on it and a menu tab will appear with radio buttons to indicate which map will be served.
+
+# Plot of region VIII 
+
+Let's now take a look at the map of region VIII. Region VIII is composed of:
+
+```{r}
+regVIII <- ph2[ph2$REGION == "VIII",]
+unique(regVIII@data$PROVINCE)
+```
+
+Please take note of the syntax for calling mapview this time. We did not actually create an R object that contains only data for region VIII like we did for the Province of Bohol. This would account for the different way the map is displayed.  The map of Bohol is displayed in close up while the plot of Region VIII is displayed as part of the whole Philippine archipelago.
+
+```{r}
+mapview(ph2[ph2$REGION == "VIII",], color = "magenta", zcol = "POPNO", burst = TRUE)
+```
+
+<br>
+
+Change the background to OpenTopoMap to see the names of the surrounding islands. In case you've been to the Philippines or know a bit of Philippine Geography, this will orient you as to where region VIII is located. zoom in to see the names of the towns and cities.
+
+# Map of Manila
+
+Maps of individual provinces and cities are also available for download at the PhilGIS website. here we demonstrate another nice feature of the `mapview` package which allows the plotting of maps side by side.
+
+```{r}
+manila <- shapefile("./manila/manila_metromanila.shp")
+m1 <- mapview(manila, map.types = "Esri.WorldImagery")
+
+m2 <- mapview(manila, map.types = "Stamen.TonerBackground")
+
+m3 <- mapview(manila, map.types = "OpenTopoMap")
+
+m4 <- mapview(manila, map.types = "Stamen.Watercolor")
+
+
+sync(m1, m2, m3, m4)
+```
+<br>
+
+<br>
+
+Notice that the 4 maps are synced. If you move one map to the left, all maps move to the left and if you zoom in one, all maps do the same.
+
+We'll continue to explore the wonderful content of the [PhilGIS](http://philgis.org/) website in another project.  Thank you for sticking around till the end.  Hope you had fun learning about R, making maps and the Philippines.
+
+# Special Thanks
+
+Many thanks to [PhilGIS](http://philgis.org/) for putting all this maps about the Philippines online and to Xavier Fuentes who contributed a lot of the maps.
+
+Thanks to Tim Appelhans, Florian Detsch, Christoph Reudenbach, and Stefan Woellauer the creators of the package `mapview`, Robert J. Hijman creator of the package `raster`, and the people behind R.
+
+
+
+
