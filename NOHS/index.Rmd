@@ -1,0 +1,240 @@
+---
+title: "National Oral Health Survey 2006"
+author: "Edmund Julian Ofilada"
+date: "April 3, 2018"
+output: 
+  html_document:
+        keep_md: true
+        toc: true
+        toc_depth: 2
+        toc_float: true
+        code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Synopsis
+
+For this project I will be showing how to include data from a national survey in an interactive map in R. Data that include geographic information are sometimes best presented using maps in order to highlight the geographic difference in the results of the survey.
+
+The data we will be using will be the National Oral Health Survey (NOHS) of 2006 conducted by the Department of Education under the direction of Dr. Juan Araojo Jr, Dr. Bella Monse, Dr. Susan Mabunga, Prof Jesus Sarol, and Prof. Dr. Roswitha Heinrich Weltzien. 
+
+The study employed a modified, stratified cluster sampling design. For each region, two urban and two rural schools were selected. If you  want to find out more about the survey just click on this [link]().
+
+We will be using the R package Mapview authored by Tim Appelhans, Florian Detsch, Christoph Reudenbach, and Stefan Woellauer to create the interactive map. Interactive maps are great for enlisting user participation and is a great teaching and learning tool. Aside from the visual information that is delivered, the experience of changing the settings according to one's own interest or predisposition allow the information to be received with greater chance of retention due to its association with a previous memory.
+
+```{r, message=FALSE, warning=FALSE}
+library(dplyr)
+library(mapview)
+library(raster)
+library(tigris)
+```
+
+# The shapefiles
+
+Shapefiles are files that contain information that can be used to create maps.   Different type of administrative maps are available for download at the [PhilGIS](http://philgis.org/) website, ranging from the country level down to the level of Barangays, the smallest administrative unit in the Philippines. Instead of clicking on the link on the website to download the zipfile, we will be using R to download and unzip the file.
+
+# Downloading the data
+
+```{r echo=TRUE, eval=FALSE}
+if (!"stormData.csv.bz2" %in% dir("./")) {
+  fileURL="http://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+  download.file(fileURL, destfile="stormData.csv.bz2", mode="wb")
+  }
+
+if (!"stormData.csv" %in% dir("./"))  {
+   bunzip2("stormData.csv.bz2", remove=FALSE)
+}download.file("https://tinyurl.com/ybtpkwxz", 
+              destfile = "census.zip", mode = "wb")
+unzip("census.zip") # unzip the files
+census_de = readr::read_csv2(list.files(pattern = "Gitter.csv"))
+```
+
+To see the content of the zip file we can use the `list.files` function in R.
+
+```{r}
+list.files("./regions")
+```
+
+# Reading the file in R
+
+We are interested in the file named `Regions.shp` which contains the feature geometry (polygons) and read it in R using the `shapefile` function from the `raster` package. We will save it in an R object, which we will name `regions`. A description of the `regions can be found below.
+
+```{r}
+regions <- shapefile("./regions/Regions.shp")
+regions
+```
+
+To see the structure of `Regions.shp` we can use the `str` function.
+
+```{r}
+str(regions, 2)
+```
+
+We see that region is of class SpatialPolygonsDataFrame and contains 5 slots. 
+
+- the data slot contains the attributes or variables that describe the shapefiles. 
+
+- the polygons slot contains the list of polygons or shapes from the.shp file.
+
+- the plotOrder is the index file that tells the order in which the map is to be plotted.
+
+- the bbox contains the limits of the map in terms of latitude and longitude.
+
+- the proj4string contains the map projection or the coordinate reference system.
+
+Click on the tab at the far right labelled code to see how to access the content of a slot.
+
+```{r}
+head(regions@data)  ###first 6 rows of data
+```
+
+Shown above are the first 6 rows of the attribute `REGION` in the data slot. it contains the names of the different administrative regions of the Philippines. 
+We will save the unique entries of the Region variable in an R object called reg_names. We will be using it later to create the dataframe that will contain the results of the NOHS survey.
+
+
+```{r}
+reg_names <- unique(regions@data$REGION)
+reg_names
+```
+
+Next we create a vector of the results of the survey pertaining to caries or tooth decay by region
+
+# The data
+
+I have a copy of the complete report of the NOHS given to me by Dr.Susan Mabunga. The report details the results of the survey according to the administrative regions of the Philippines. I will lift the data from the pdf file and create a dataframe in R containing the variable DMFT and BMI.
+
+```{r}
+DMFT <- c(3.1, 2.5, 2.3, 2.3, 3.3, 2.6, 1.9, 2.9, 4.0, 3.7, 2.2, 2.7, 3.9, 3.5, 3.1, 2.1, 3.3)
+
+BMI <-c(30.0, 31.7, 25.8, 20.3, 32.5, 9.2, 26.9, 18.6, 37.3, 29.1, 25.2, 38.7, 27.6, 31.6, 29.2, 26.1, 37.3)
+
+mydf <- data.frame(list(REGION = reg_names, dmft = DMFT, bmi = BMI))
+mydf
+```
+
+We just created a dataframe called mydf with the following variables:
+
+- REGION - The names of the administrative regions of the Philippines copied from the shapefile.
+
+- dmft - the mean number of decayed, missing, and filled teeth among 12 years olds surveyed in each region.
+
+- bmi - the mean percent of the population in the region that has a Body Mass Index (BMI) that is below what is considered normal.
+
+I chose to include the dmft variable for this project because I was a dentist before I discovered R programming.  I used to extract teeth now I extract bytes. Oral health, particularly caries or tooth decay remains a significant Public Health problem in the Philippines to this day.
+
+I included the BMI data because in a visit to the island of Samar in 2013, I came to an epiphany about the state of malnutrition in our country. For some time before 2013, I have been receiving an invitation to conduct a dental mission in the town of Mondragon, Samar. I finally decided to hop on a bus and acquiesce to the invitation bringing with me my dental instruments and anesthesia. 
+
+I also brought with me used school uniforms consisting of white polo shirts and khaki pants, the usual elementary uniform for the Philippines. I solicited these from my fellow parents in my son's school. I was going to donate them to the local Public School in Mondragon for the children who can't afford to buy their own uniform. The uniforms I solicited was from children in grade school who were about to cross to High School which has a different set of uniforms. Hence, the parents were glad to give the old unforms away.
+
+We'll continue the story later.  Meanwhile let's get back to creating our interactive map. We will now merge the mydf dataframe containing the DMFT and BMI information with the SpatialPolygonsDataFrame regions that contain the information how to create the philippine map.
+
+```{r}
+merged_df <- geo_join(regions, mydf, "REGION", "REGION")
+```
+
+We now have an R object called `merged_df`, of class SpatialPolygonsDataFrame, that contains the DMFT and BMI data we want to show.
+
+```{r}
+head(merged_df@data)
+```
+
+# Plotting the NOHS result for Luzon
+
+let's now examine the NOHS results for the island of Luzon in an interactive map.
+
+```{r}
+luzon <- merged_df[merged_df$REGION == "Ilocos Region (Region I)" | merged_df$REGION ==  "Cagayan Valley (Region II)" | merged_df$REGION == "Central Luzon (Region III)" | merged_df$REGION == "Cordillera Administrative Region (CAR)" | merged_df$REGION == "CALABARZON (Region IV-A)" | merged_df$REGION == "Metropolitan Manila" | merged_df$REGION == "MIMAROPA (Region IV-B)" | merged_df$REGION == "Bicol Region (Region V)", ]
+
+mapview(luzon,                                   ### data we want to plot
+        color = "springgreen",                   ### color of the tiles
+        popup = popupTable(luzon,                 
+                           zcol = c("REGION",
+                                    "dmft",    ### variables to display
+                                    "bmi")))
+```
+
+
+<br>
+
+You can zoom in and out by clicking on the + or - sign on the top left. You can also move the map by clicking anywhere in the plot area, holding it and moving it to the direction you want to go. Clicking on the luzon tab at the lower right corner will bring you back to the staring point.
+
+Click on a particular region or tile and a popup table will appear showing the region, dmft, and bmi. 
+
+The icon that looks like a stack of papers underneath the + and - signs allow you to choose the kind of back ground you'd like. Click on it and a menu tab will appear with radio buttons to indicate which map will be served.
+
+# NOHS result for Mindanao
+
+```{r}
+mindanao <- merged_df[merged_df$REGION == "Autonomous Region of Muslim Mindanao (ARMM)" | merged_df$REGION ==  "Caraga (Region XIII)" | merged_df$REGION == "Davao Region (Region XI)" | merged_df$REGION == "Northern Mindanao (Region X)" | merged_df$REGION == "SOCCSKSARGEN (Region XII)" | merged_df$REGION == "Zamboanga Peninsula (Region IX)", ]
+
+mapview(mindanao,                                   ### data we want to plot
+        color = "dodgerblue2",                   ### color of the tiles
+        zcol = "REGION",
+        burst = TRUE,
+        popup = popupTable(mindanao,                 
+                           zcol = c("REGION",
+                                    "dmft",    ### variables to display
+                                    "bmi")))
+```
+
+<br>
+
+Notice that there are a few things different in the Mindanao map compared to the previous map of Luzon. I intentionally did this to show you to see the different options that the package `mapview` can present data.
+
+We added color to differentiate the regions from one another. The tabs on the lower right corner are labelled with the names of the regions.  Click on anyone of them and the map will zoom in on that particular region. Click on the zoom full tab on the lower left corner to return the map to starting position.
+
+# NOHS result for Visayas
+
+```{r}
+visayas <- merged_df[merged_df$REGION == "Central Visayas (Region VII)" | merged_df$REGION ==  "Eastern Visayas (Region VIII)" | merged_df$REGION == "Western Visayas (Region VI)", ]
+
+mapview(visayas,                                   ### data we want to plot
+        color = "springgreen",                   ### color of the tiles
+        zcol = "REGION",
+        burst = TRUE,
+        popup = popupTable(visayas,                 
+                           zcol = c("REGION",
+                                    "dmft",    ### variables to display
+                                    "bmi")))
+```
+
+<br>
+
+If you have been busy clicking on the interactive map you would have a fair idea about the distribution of the `bmi` variable.  Remember the `bmi` variable, as presented here, represents the percentage of the surveyed population that had a bmi that is below normal. Here's a density plot of the distribution of `bmi` for all the regions. 
+
+```{r}
+library(ggplot2)
+ggplot(mydf, aes(bmi)) + geom_density(fill = "dodgerblue2", color = "black")
+```
+
+Based on the density plot, 30% was the most common value among the regions surveyed. Summarizing the results of the BMI for the whole nation, the NOHS report states: "The weight and height of the 12-year-old children were measured for Body Mass Index in order to obtain information on the nutritional status of the children. The mean BMI on national level is 16.6... Of the 12-year-old children, 27% belonged to the category below normal, interestingly higher percentage in boys (31%) than in girls (24%)."
+
+The uniforms I brought with me from Manila can easily fit 2, maybe 3 students from the local school I visited in Mondragon. The uniforms were simply too big for the children in Samar, even for those who were in High School. 
+
+Access to data about our country brings to light the issues faced by our countrymen who are beyond our immediate vicinty. It allows us to understand the plight of those leaving in the rural areas in an objective manner and track whether their conditions have improved across time. 
+
+It provides an alternative to the often inflammatory news reports that seek to put Government in a bad light or increase the popularity of politicians when election time draws near.
+
+It allows us to view the disparity of the living conditions in the nations capital, Manila, and the rural areas where children have to wade through rivers in order to get to school.
+
+In reality, very few of us will have the resources or capability to help or solve the problems our fellow countrymen are facing but by presenting data in a manner that provide easy access, we can start discussions, rouse opinions and that in itself is the start of the process of seeking solutions. Access to data allows everyday people to participate in nation building.
+
+Many thanks to the team behind the National Oral Health Survey (NOHS) of 2006 for a very comprehensive and well written report and to Tim Appelhans, Florian Detsch, Christoph Reudenbach, and Stefan Woellauer for their wonderful mapview package. I wish PhilGIS will have more success and contributors of data in its website.
+
+Thank you so much for reading and I hope you found this document worthwhile and interesting. I leave you with a map of where Mondragon, Samar is located.  Click on the single point to see a video of Samar.
+
+```{r}
+library(ggmap)
+library(sf)
+geocode("Saint Anthony's Academy, Mondragon, Northern Samar")
+pnt <- data.frame(x = 124.7518, y = 12.51766)
+pnt <- st_as_sf(pnt, coords = c("x", "y"), crs = 4326)
+
+mapview(pnt, popup = mapview:::popupIframe("https://www.youtube.com/embed/bqglXoX-cLA", width = 300, height = 225), map.types = "OpenStreetMap.DE", zoom = 6)
+```
+
+
+
