@@ -42,5 +42,9 @@ Each of the folders in this repository contain the files for my  projects. You c
      
 - [Earthquake_Philippines](https://docofi.github.io/Building_Data_Visualization_Tools/Earthquake_Philippines/)
      - 38 years of earthquake history plotted using ggplot
+     
+- [National Oral Health Survey 2006](https://docofi.github.io/Building_Data_Visualization_Tools/NOHS/)
+     - Mapping the DMFT and BMI results of the 2006 National Oral Health Survey     
+     
 
 To download the content of this repository as a .zip file, click on the Download ZIP button. If you have a GitHub account, you can fork the content so you'll have a copy on your GitHub account.  
