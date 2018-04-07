@@ -1,0 +1,196 @@
+---
+title: "Resources for Families with Diabetic Children"
+author: "Edmund Julian Ofilada"
+date: "April 4, 2018"
+output: 
+  html_document:
+        code_folding: hide
+        toc: true
+        toc_depth: 2
+        toc_float: true
+        keep_md: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Synopsis
+
+Having diabetes as a child is a big challenge not only to the child but to the whole family as well. The challenges are far too numerous to enumerate and every road you take seem to have a pothole lurking to derail the  journey or  put it to an end. For this project I will be focussing on a resource for diabetic kids that has proved to be very helpful, the diabetes camp.
+
+The diabetes camp is a way for a child with diabetes to come to terms with his diabetes on his own. For the first time in his life, mom and dad are not there to tell him what to do next, to keep him safe, and prevent him from indulging in activities that are gratifying but harmful. It is a time to believe that I am not the only one in this world who has this disease and that other people share my feelings towards this disease.
+
+With the help of R and packages created by wonderful people who share their talents freely, I hope to bring to light where diabetes camps are found in the Philippines and what they have to offer. Hopefully, this document will eventually find its way to the top of a google search for someone looking to provide help for his or her diabetic child in the Philippines.
+
+# How did i become an expert at diabetes camps?
+
+I don't consider myself an expert but I have attended a few as Project Coordinator for Project Oral Health for Juvenile Diabetics (POHJD). POHJD was a project I started in 1996 to help type 1 diabetic kids avail of free dental treatment. The project was based at St. Luke's Medical Center in Quezon City.
+
+```{r, warning=FALSE, message=FALSE}
+library(dplyr)
+library(leaflet)
+library(mapview)
+library(ggmap)
+
+pohjd1Icon <- makeIcon(
+  iconUrl = "https://docofi.github.io/extras/www/POHJD.png",
+  iconWidth = 39, iconHeight = 95,
+  iconAnchorX = 22, iconAnchorY = 94
+  )
+
+slmc <- geocode("St.Luke Medical Center, Quezon City, Philippines")
+pohjdLatLong <- data.frame(
+  lat = 14.62243,
+  lng = 121.0235)
+slmc <- geocode("St.Luke Medical Center, Quezon City, Philippines")
+
+pohjdLatLong %>% 
+  leaflet(options = leafletOptions(maxZoom = 18)) %>%
+  addProviderTiles("OpenStreetMap.Mapnik") %>%
+  addMarkers(icon = pohjd1Icon)
+```
+
+
+<br>
+
+I was granted the privilege to attend diabetes camps to share my knowledge about oral health problems that are common to children with diabetes. Yes, I was a dentist before I learned R. I used to extract teeth, now I extract bytes.
+
+Diabetes Camps are usually held during the Holy Week. The Philippines is predominantly a Christian country and Holy Week is observed by having public and private schools and offices closed from Holy Wednesday till Good Friday. Diabetes camps take advantage of this break to hold their camp as the children don't have school, and doctors and nurses find it easy to take leave from their respective clinics and hospitals.
+
+# Rainbow camp
+
+Rainbow camp is a camp that is usually held in Hermosa, Bataan. The camp offers a chance to experience outdoor activities like a trek to a nearby hill that passes through a brook and a camp out under the stars for one night. 
+
+Click on the minus sign to see familiar roads to orient yourself to the location of the camp in relation to other landmarks like the SCITEX. Click on the dot in the middle to see a video I took while attending Rainbow Camp.
+
+```{r, message=FALSE, warning=FALSE}
+library(ggmap)
+library(mapview)
+library(sf)
+bataan <- geocode("Hermosa, Bataan, Philippines")
+###Source : https://maps.googleapis.com/maps/api/geocode/json?address=Hermosa%2C%20Bataan%2C%20Philippines
+###      lon      lat
+###1 120.4242 14.82691
+pnt <- data.frame(x = 120.4242, y = 14.82691)
+pnt <- st_as_sf(pnt, coords = c("x", "y"), crs = 4326)
+
+mapview(pnt, popup = mapview:::popupIframe("https://www.youtube.com/embed/yc6OMXUSlLA", width = 300, height = 225), map.types = "OpenStreetMap.DE", zoom = 6)
+```
+
+<br>
+
+Activities in all diabetes camps are designed to impart practical knowledge about how to manage diabetes. With great deal of care the concepts are taught tailored to the level of understanding of the audience. Lectures are minimized as these prove to be ineffective in motivating children and teens to adapt the behaviour that is being espoused. Instead, concepts are wrapped around fun activities that the children enjoy and will remember.
+
+A typical curriculum for a diabetes camp will include the following key concepts:
+
+- Blood Glucose Monitoring
+- Insulin and its effect
+- Hypoglycemia, Hyperglycemia and its prevention and management
+- Food groups and eating the right kind of foods
+- Complications of diabetes
+- and if your're lucky there's a topic on oral health
+
+
+# PSPME
+
+PSPME stands for [Philippine Society of Pediatric Metabolism and Endocrinology](http://www.pspme.com.ph/). Managing children with diabetes technically belong to the province of pediatric endocrinologist but because the number of specialists in this specialty is so few, a lot of type 1 diabetics are managed by physicians with a different specialty. Even generalist manage juvenile diabetics in the provinces.
+
+But the pediatric endocrinologist offers something more than other doctors who know how to manage diabetes. They offer an approach that is more attentive to the growth and development of children and teens. Addressing issues like developmental milestones and the child's perception of himself or herself as a person with diabetes, which are easily overlook by other specialties. 
+
+Click on the point in the center of the map to see a picture of the camp site in 2013.  The site for the camp varies from year to year, which for some kids is an advantage as they get to see and experience different locales each year.
+
+
+```{r, message=FALSE, warning=FALSE}
+batangas <- geocode("Nasugbu, Batnagas, Philippines")
+###Source : https://maps.googleapis.com/maps/api/geocode/json?address=Nasugbu%2C%20Batnagas%2C%20Philippines
+###      lon      lat
+###1 120.689 14.09404
+pnt <- data.frame(x = 120.689, y = 14.09404)
+pnt <- st_as_sf(pnt, coords = c("x", "y"), crs = 4326)
+
+
+img1 <- "https://docofi.github.io/extras/www/pspme.jpg"
+
+mapview(pnt, map.types = "Esri.WorldImagery",
+        popup = popupImage(img1, src = "remote"))
+```
+
+
+# Camp COPE
+
+COPE stands for Children Overcoming Diabetes Problems Everywhere. The 
+[Philippine Center for Diabetes Education Foundation, Inc (Diabetes Center)](http://www.pcdef.org/camp-cope) is the organization behind Camp Cope. The first time I attended their camp, they had it in Laguna, but now they have taken a liking to Tagaytay. Having the camp in Tagaytay takes advantage of the cool weather and the provincial surrounding. Plus Tagaytay has been developing several educational tourism sites that are perfect to pique the interest of children like zoos and parks. The camp offers a different destination every year for the children to enjoy.
+
+Click on the point in the center again to see the theme for the camp in 2015.
+
+```{r, warning=FALSE, message=FALSE}
+tagaytay <- geocode("Tagaytay Haven Hotel, Mendez, Tagaytay")
+###Source : https://maps.googleapis.com/maps/api/geocode/json?address=Tagaytay%20Haven%20Hotel%2C%20Mendez%2C%20Tagaytay
+###       lon      lat
+###1 120.9166 14.09706
+pnt <- data.frame(x = 120.9166, y = 14.09706)
+pnt <- st_as_sf(pnt, coords = c("x", "y"), crs = 4326)
+
+
+img2 <- "https://docofi.github.io/extras/www/campcope.jpg"
+
+mapview(pnt, map.types = "Esri.WorldImagery",
+        popup = popupImage(img2, src = "remote"))
+```
+
+
+# Davao Diabetes Camp
+
+The diabetes camp in Davao is run by one of the graduates of the PSPEM and I believe that she is still the lone Pediatric Endocrinologist in the island of Mindanao. The camp in Davao is not held yearly, which underscores the burden borne by this different organizations in order to have children with diabetes have something to look forward to during the summer. And believe me, the children are already counting the number of days till the next camp even before they board the bus going back to their parents. Once a kid experiences camp, he or she we'll want to go back. Unfortuantely, not everyone can be accomodated every year to make room for newly diagnosed kids.
+
+If you want to see the video of the camp in Davao, which was held in Samal island, one of the tourist spots in Davao, click on the point in the middle of the map. The Point in the map is located somewhat inland that is because the map is centerd on the centroid of Samal island but the camp itself is located in one of the resorts near the coastline.
+
+```{r, message=FALSE, warning=FALSE}
+davao <- geocode("samal Island, Davao, Philippines")
+###Source : https://maps.googleapis.com/maps/api/geocode/json?address=samal%20Island%2C%20Davao%2C%20Philippines
+###       lon      lat
+###1 125.7188 7.103312
+pnt <- data.frame(x = 125.7188, y = 7.103312)
+pnt <- st_as_sf(pnt, coords = c("x", "y"), crs = 4326)
+
+mapview(pnt, popup = mapview:::popupIframe("https://www.youtube.com/embed/NVMguNlSsKU", width = 300, height = 225), map.types = "OpenStreetMap.DE", zoom = 6)
+```
+
+Thank you for reading up to this point I hope you enjoyed this little presentation and may you pass on what you have learned to someone who has a diabetic kid in the family.
+
+The different organizations that hold the camps may be reached thru the following links:
+
+[Rainbow Camp Foundation Philippines Incorporated](http://www.isdfi.org/societies/rc/)
+Address: 52 Apitong Street, 1808, Marikina, Metro Manila
+Phone: (02) 942 0313
+email: 
+
+[Philippine Society of Pediatric Metabolism and Endocrinology](http://www.pspme.com.ph/)
+Address: Medical Arts Building Room 240
+Cardinal Santos Medical Center
+Wilson St, Greenhills
+San Juan, Metro Manila
+Phone: (632) 727-7655  /  (632) 727-0001 (loc. 840)
+email: admin@pspme.com.ph
+
+[Philippine Center for Diabetes Education Foundation, Inc (Diabetes Center)](http://www.pcdef.org/camp-cope)
+Address:2nd Floor, Hall C, Makati Medical Center, 	
+2 Amorsolo St., Legaspi Village, 	 
+Makati City
+Phone: +632 892 1064 /  +632 888 8999 local 2287
+Mobile: +63998 567 8978 /  +63922 808 0538
+email: diabetescenter@pcdef.org
+Facebook: http://www.facebook.com/diabcenterRP
+Instagram: diabetes.center
+Twitter: @DiabCtrPhil
+
+You may inquire about the Davao Diabetes Camp through the
+[Philippine Society of Pediatric Metabolism and Endocrinology](http://www.pspme.com.ph/)
+Address: Medical Arts Building Room 240
+Cardinal Santos Medical Center
+Wilson St, Greenhills
+San Juan, Metro Manila
+Phone: (632) 727-7655  /  (632) 727-0001 (loc. 840)
+email: admin@pspme.com.ph
+
