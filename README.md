@@ -47,5 +47,8 @@ Each of the folders in this repository contain the files for my  projects. You c
      - Mapping the DMFT and BMI results of the 2006 National Oral Health Survey     
 - [PhilGIS](https://docofi.github.io/Building_Data_Visualization_Tools/PhilGIS/)
      - Initial exploration of the PhilGIS website. A treasure trove of data about the Philippines
+     
+- [Diabetes Camps](https://docofi.github.io/Building_Data_Visualization_Tools/Diabetes_Camps/)
+     - Resources for families with a diabetic child
 
 To download the content of this repository as a .zip file, click on the Download ZIP button. If you have a GitHub account, you can fork the content so you'll have a copy on your GitHub account.  
