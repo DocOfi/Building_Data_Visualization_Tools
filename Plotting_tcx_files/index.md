@@ -66,8 +66,8 @@ Let's take a look at the content of the fitbit1.RData file. I will be displaying
 
 
 ```r
-load("./data/fitbit1.RData")
-ls()
+load("./data/fitbit1.RData")  ###Load variables in global environment
+ls()                          ###List variables in global environment
 ```
 
 ```
@@ -95,7 +95,7 @@ We loaded the packages: `dplyr`, `lubridate`, `leaflet`, and `ggplot` which will
 
 
 ```r
-str(d)
+str(d)      ###See content of variable d
 ```
 
 ```
@@ -117,7 +117,7 @@ we cans see the first six rows of data below.
 
 
 ```r
-head(d)
+head(d)     ###Show first sixs rows of d
 ```
 
 ```
@@ -134,8 +134,11 @@ We can also manipulate the data in R in order to show other details with regard 
 
 
 ```r
-d$weekday <- wday(d$time, label = TRUE, abbr = TRUE)
-d$date <- date(d$time)
+d$weekday <- wday(d$time,          ### get weekday from d$time
+                  label = TRUE,    ### display as words
+                  abbr = TRUE)     ### display abbreviated version
+
+d$date <- date(d$time)             ### create new variable date 
 head(d)
 ```
 
@@ -156,20 +159,23 @@ Let's summarize our data to reflect the total number of steps per day during tha
 
 
 ```r
-day_sum <- d %>% group_by(day) %>% summarize(Total_steps = sum(steps))
-tail(day_sum)
+day_sum <- d %>%                             ### create variable day_sum which
+        group_by(day) %>%                    ### summarize the data as the number
+        summarize(Total_steps = sum(steps))  ### of steps per day
+
+tail(day_sum)                                ### show last 6 rows of day_sum
 ```
 
 ```
 ## # A tibble: 6 x 2
 ##   day   Total_steps
 ##   <chr>       <dbl>
-## 1 11-28      10429.
-## 2 11-29      15245.
-## 3 11-30      13795.
-## 4 12-01      16376.
-## 5 12-02      14539.
-## 6 12-03      13404.
+## 1 11-28       10429
+## 2 11-29       15245
+## 3 11-30       13795
+## 4 12-01       16376
+## 5 12-02       14539
+## 6 12-03       13404
 ```
 
 We can appreciate that data much better in a plot.
@@ -177,16 +183,17 @@ We can appreciate that data much better in a plot.
 
 
 ```r
-library(leaflet)
-library(ggplot2)
-ggplot(day_sum,
-       aes(x = day,
-           y = Total_steps,
-           fill = Total_steps)) +
-        geom_bar(stat = "identity") +
-        geom_hline(yintercept = 15000) +
-        theme(axis.title.x = element_blank()) +
-        ggtitle("Number of steps per day")
+library(leaflet)                                  ###load package leaflet
+library(ggplot2)                                  ###load package ggplot2
+
+ggplot(day_sum,                                   ### data = day_sum
+       aes(x = day,                               ### plot day on x axisl
+           y = Total_steps,                       ### plot Total_steps on y axis
+           fill = Total_steps)) +                 ### Use Totals_steps to color 
+        geom_bar(stat = "identity") +             ### create a bar graph
+        geom_hline(yintercept = 15000) +          ### create horizontal line at 15000
+        theme(axis.title.x = element_blank()) +   ### remove label for x axis
+        ggtitle("Number of steps per day")        ### Provide title
 ```
 
 ![](index_files/figure-html/unnamed-chunk-8-1.png)<!-- -->
@@ -197,15 +204,20 @@ To find out what day of the week I was able to meet my 15000 goal per day we can
 
 
 ```r
-d %>% group_by(date) %>% summarize(Total_steps = sum(steps)) %>% filter(Total_steps > 15000) %>% mutate(weekday = wday(date, label = TRUE))
+d %>%
+        group_by(date) %>%
+        summarize(Total_steps = sum(steps)) %>%
+        filter(Total_steps > 15000) %>%           ### filter only days with steps greater
+        mutate(weekday = wday(date,               ### than 15000 and show as day of the
+                              label = TRUE))      ### day of the week
 ```
 
 ```
 ## # A tibble: 2 x 3
 ##   date       Total_steps weekday
 ##   <date>           <dbl> <ord>  
-## 1 2016-11-29      15245. Tue    
-## 2 2016-12-01      16376. Thu
+## 1 2016-11-29       15245 Tue    
+## 2 2016-12-01       16376 Thu
 ```
 
 ## Prettier plot
@@ -217,14 +229,14 @@ We can improve the previous graph such that it conveys the information readily.
 ```r
 d %>% group_by(date) %>%
         summarize(Total_steps = sum(steps)) %>%
-        mutate(target_met = Total_steps >= 15000) %>%
-        ggplot(aes(x = date,
-                   y = Total_steps,
+        mutate(target_met = Total_steps >= 15000) %>%   ### create ne variable which gives
+        ggplot(aes(x = date,                            ### the value of true if the number 
+                   y = Total_steps,                     ### of steps exceed 15000
                    fill = target_met)) +
         geom_bar(stat = "identity") +
         geom_hline(yintercept = 15000,
                    linetype = "dashed") +
-        ggtitle("Steps by Day")
+        ggtitle("Number of steps per day")
 ```
 
 ![](index_files/figure-html/unnamed-chunk-10-1.png)<!-- -->
@@ -236,35 +248,45 @@ If we want to see number of steps throughout the day by 15 min intervals we can:
 
 
 ```r
-d$hrminsec <- substr(d$time, 12, 19)
+d$hrminsec <- substr(d$time, 12, 19)        ### create new variable showing only time
 
-ggplot(d, aes(as.factor(hrminsec),
-              steps,
-              fill = steps)) +
-        geom_bar(stat = "identity") +
-        facet_grid(day~.) +
-        xlab("15 minute interval") +
-        ggtitle("steps by 15 min interval") +
-        theme(legend.position = "bottom",
-              legend.direction = "horizontal",
-              axis.text.x= element_text(angle=90),
-              axis.text.y = element_text(size = 11),
-              plot.title = element_text(face = "bold",
+hr_labels <- d$hrminsec[grep(":00:00",      ### get only time that is an exact hour
+                             d$hrminsec)]
+
+xtick_labels <- substr(hr_labels, 1, 5)     ### remove zeroes which stand for minutes
+
+ggplot(d, aes(as.factor(hrminsec),                       ### plot the number of steps every
+              steps,                                     ### 15 minutes
+              fill = steps)) +                           ### let color denote the number of steps
+        geom_bar(stat = "identity") +                    ### create a bar chart 
+        facet_grid(day~.) +                              ### show each day in a different panel
+        xlab("15 minute interval") +                     ### label x axis
+        ggtitle("steps by 15 min interval") +            ### provide a title
+        scale_x_discrete(breaks = hr_labels,             ### provide breaks for every hour on the x axis
+                         labels = xtick_labels) +        ### provide label for axis ticks
+        theme(legend.position = "bottom",                ### put legend at the bottom
+              legend.direction = "horizontal",           ### make legend span horizontally
+              axis.text.y = element_text(size = 11),     ### specify size ofy axis tick labels
+              axis.text.x= element_text(angle = 50,
+                                        size = 15,
+                                        vjust = 0.5),
+              plot.title = element_text(face = "bold",   ### specify dimensions of title
                                         vjust = 2,
                                         size = 20),
-              axis.title.y = element_text(size = 17, vjust = 2),
-              axis.title.x = element_text(size = 17, vjust = 0),
-              legend.key.size = unit(1.2, "cm"),
-              legend.text = element_text(size = 15),
+              axis.title.y = element_text(size = 17,     ### specify size and justification of y 
+                                          vjust = 2),    ### axis label
+              axis.title.x = element_text(size = 17,     ### specify size and justification of x
+                                          vjust = 0),    ### specify size and justification of y
+              legend.key.size = unit(1.2, "cm"),         ### specify legend key dimensions
+              legend.text = element_text(size = 15),    
               legend.title = element_text(size = 17))
 ```
 
 ![](index_files/figure-html/unnamed-chunk-11-1.png)<!-- -->
         
+To help you understand the plot, the y-axis represents the time beginning at 12 midnight at the left most tick mark and ending a period of 24 hours at the rightmost tick mark. Each bar represents the number of steps at each 15 minute period throughout the day. The tick mark labels for every 15 seconds took too much space making the size of the letters too small. Luckily, ggplot has a provided a solution for this particular problem. I changed the labels on the tick marks to reflect only hours to make the labels readadble.   
 
-        
-        
-To help you understand the plot, I usually left the office at around 10 am and went beck around  10 pm.  That's right I was in the graveyard shift. The customers we catered to were from another continent in a different time zone. 
+I usually left the office at around 10 am and went beck around  10 pm.  That's right I was in the graveyard shift. The customers we catered to were from another continent in a different time zone. 
 
 I remember distictly that I was taking the course Bayesian Statistics course offered by the Duke University in Coursera at the time and the graveyard shift didn't help any to ease learning.
 
@@ -279,7 +301,8 @@ We read in the data using the `readTCX` function from the `trackeR` package.
 
 ```r
 library(trackeR)
-am_run <- readTCX(file = "./data/fitbit.tcx", timezone = "Asia/Taipei")
+am_run <- readTCX(file = "./data/fitbit.tcx",     ### read tcx file
+                  timezone = "Asia/Taipei")       ### use asia timezone
 str(am_run)
 ```
 
@@ -335,8 +358,8 @@ We'll tranform our data frame to a time series data to better plot the variables
 
 
 ```r
-am_run_ts <- trackeRdata(am_run)
-str(am_run_ts, 2)
+am_run_ts <- trackeRdata(am_run)    ### transform dataframe to time series
+str(am_run_ts, 2)                   ### show dimension of data
 ```
 
 ```
@@ -361,7 +384,7 @@ We can see a summary of my performance by using the `summary` function.
 
 
 ```r
-summary(am_run_ts, movingThreshold = 1)
+summary(am_run_ts, movingThreshold = 1)     ### create a summary of data
 ```
 
 ```
@@ -398,10 +421,12 @@ We can also plot heartbeat and pace.
 
 
 ```r
-plot(am_run_ts, what = c("heart.rate", "distance", "pace"))
+plot(am_run_ts, what = c("heart.rate",       ### plot data
+                         "distance",
+                         "pace"))
 ```
 
-![](index_files/figure-html/unnamed-chunk-17-1.png)<!-- -->
+![](index_files/figure-html/unnamed-chunk-16-1.png)<!-- -->
 
 Looking at the plot we can see a series of up and down movement in pace and heartbeat.  This is due to the many crossroads and vehicular traffic in the area.  It would be better if we have a sustained level of heart rate and pace.
 
@@ -412,14 +437,16 @@ We will use the plotRoute function from the package TrackeR
 
 
 ```r
-plotRoute(am_run_ts, zoom = 15, source = "google")
+plotRoute(am_run_ts,               ### use plotRoute to map data
+          zoom = 15,               ### specify amount of zoom
+          source = "google")       ### use google map
 ```
 
 ```
 ## Source : https://maps.googleapis.com/maps/api/staticmap?center=14.618019,121.028885&zoom=15&size=640x640&scale=2&maptype=terrain&language=en-EN
 ```
 
-![](index_files/figure-html/unnamed-chunk-18-1.png)<!-- -->
+![](index_files/figure-html/unnamed-chunk-17-1.png)<!-- -->
 
 
 or the leaflet function from the package leaflet which gives us a lot of flexibility on how our plot should look
@@ -427,11 +454,11 @@ or the leaflet function from the package leaflet which gives us a lot of flexibi
 
 
 ```r
-leaflet(am_run) %>%
+leaflet(am_run) %>%                                           
                 addTiles() %>% 
-                addProviderTiles("OpenStreetMap.Mapnik") %>% 
-                setView(121.0289, 14.61739, zoom = 15) %>%
-                addPolylines(~longitude, ~latitude) 
+                addProviderTiles("OpenStreetMap.Mapnik") %>%    ### Use openstreetmap
+                setView(121.0289, 14.61739, zoom = 15) %>%      ### set center of map
+                addPolylines(~longitude, ~latitude)             ### plot route
 ```
 
 <!--html_preserve--><div id="htmlwidget-ad85768351bff4328df6" style="width:672px;height:480px;" class="leaflet html-widget"></div>
@@ -449,10 +476,12 @@ The value of the tracker for this exercise is to monitor the heart rate. The lon
 
 
 ```r
-bike1 <- readTCX(file = "./data/fitbit2.tcx", timezone = "Asia/Taipei")
-bike2 <- readTCX(file = "./data/fitbit3.tcx", timezone = "Asia/Taipei")
-stat_bike <- rbind(bike1, bike2)
-stat_bike_ts <- trackeRdata(stat_bike)
+bike1 <- readTCX(file = "./data/fitbit2.tcx",  ### read tcx file
+                 timezone = "Asia/Taipei")     ### use asia time zone
+bike2 <- readTCX(file = "./data/fitbit3.tcx",  
+                 timezone = "Asia/Taipei")
+stat_bike <- rbind(bike1, bike2)               ### combine the two files
+stat_bike_ts <- trackeRdata(stat_bike)         ### convert to time series
 str(stat_bike_ts, 2)
 ```
 
@@ -476,7 +505,7 @@ str(stat_bike_ts, 2)
 
 
 ```r
-summary(stat_bike_ts, movingThreshold = 1)
+summary(stat_bike_ts, movingThreshold = 1)     ### create a summary of data
 ```
 
 ```
@@ -512,60 +541,94 @@ The plot shows that i was able to reach a peak heart rate of about 145 (bpm) and
 
 
 ```r
-plot(stat_bike_ts)
+plot(stat_bike_ts)  ### plot heart rate and pace during workout
 ```
 
-![](index_files/figure-html/unnamed-chunk-22-1.png)<!-- -->
+![](index_files/figure-html/unnamed-chunk-21-1.png)<!-- -->
 
-You can also plot the percentage of times you were able to maintain a range of heart beat.
+You can also plot the percentage of the time you were able to maintain your heart beat at a certain range.
 
 
 ```r
-zone2 <- zones(stat_bike_ts)
+zone2 <- zones(stat_bike_ts)  ### create bar chart of heart rate and speed
 plot(zone2)
 ```
 
-![](index_files/figure-html/unnamed-chunk-23-1.png)<!-- -->
+![](index_files/figure-html/unnamed-chunk-22-1.png)<!-- -->
 
 There are so many other useful and interesting functions in the TrackeR package but because we have a limited amount of data, we are unable to show them here. You can find the intoructory tutorial for the package trackeR at this URL https://cran.r-project.org/web/packages/trackeR/vignettes/TourDetrackeR.html
 
 ## Linear Regression
 
-I was able find a `.csv` file of the data for the same period above with variables that recorded the amount of sleep and calories burned. With the help of R we can do linear regression with our data to help us plan the amount of calories we'd like to burn in an exercise session. I had to clean the data a bit to make it more suitable for manipulating in R.
+I was able find a `.csv` file of the data for the same period above with variables that recorded the amount of sleep and calories burned. With the help of R we can do linear regression with our data to help us plan the amount of calories we'd like to burn in an exercise session. I had to clean the data a bit to make it more suitable for manipulating in R. One of the `csv` file contained two dataframes.
 
 
 ```r
-week <- read.csv("fitbit.csv", stringsAsFactors = FALSE, skip = 1)
-week$Date <- mdy(week$Date)
+week <- read.csv("fitbit.csv",                              ### read csv file in R
+                 stringsAsFactors = FALSE,                   ### don't convert strings to factor
+                 skip = 1)                                  ### skip first row
 
-nov17todec4 <- read.csv("fitbit_export_20161206.csv", stringsAsFactors = FALSE, skip = 22, nrows = 18)
-nov17todec4_sleep <- read.csv("fitbit_export_20161206.csv", stringsAsFactors = FALSE, skip = 43, nrows = 19)
+week$Date <- mdy(week$Date)                                 ###  parse Date
 
-twoweeks <- cbind(nov17todec4, nov17todec4_sleep[, 2:5])
-threeweeks <- rbind(week[, -c(2:4)], twoweeks)
+nov17todec4 <- read.csv("fitbit_export_20161206.csv",   
+                        stringsAsFactors = FALSE,
+                        skip = 22,                          ### skip to row 22
+                        nrows = 18)                         ### read 18 rows
 
-threeweeks$Calories.Burned <- gsub(",", "", threeweeks$Calories.Burned)
-threeweeks$Steps <- gsub(",", "", threeweeks$Steps)
-threeweeks$Activity.Calories <- gsub(",", "", threeweeks$Activity.Calories)
-threeweeks$Minutes.Sedentary <- gsub(",", "", threeweeks$Minutes.Sedentary)
-threeweeks$Calories.Burned <- as.numeric(threeweeks$Calories.Burned)
-threeweeks$Steps <- as.numeric(threeweeks$Steps)
-threeweeks$Minutes.Sedentary <- as.numeric(threeweeks$Minutes.Sedentary)
-threeweeks$Activity.Calories <- as.numeric(threeweeks$Activity.Calories)
+nov17todec4_sleep <- read.csv("fitbit_export_20161206.csv",
+                              stringsAsFactors = FALSE,
+                              skip = 43,                    ### skip to row 43
+                              nrows = 19)                   ### read 19 rows
+
+twoweeks <- cbind(nov17todec4,                              ### bind the two dataframes from
+                  nov17todec4_sleep[, 2:5])                 ### the same csv fileby column
+
+threeweeks <- rbind(week[, -c(2:4)],                        ### bind the two dataframes
+                    twoweeks)                               ### by row
+
+threeweeks$Calories.Burned <- gsub(",",                                    ### remove commas
+                                   "",                    
+                                   threeweeks$Calories.Burned)
+threeweeks$Steps <- gsub(",",                                              ### remove commas
+                         "",
+                         threeweeks$Steps)              
+threeweeks$Activity.Calories <- gsub(",",
+                                     "",
+                                     threeweeks$Activity.Calories)
+threeweeks$Minutes.Sedentary <- gsub(",",                                  ### remove commas
+                                     "",
+                                     threeweeks$Minutes.Sedentary)
+threeweeks$Calories.Burned <- as.numeric(threeweeks$Calories.Burned)       ### change to class numeric
+
+threeweeks$Steps <- as.numeric(threeweeks$Steps)                           ### change to class numeric
+
+threeweeks$Minutes.Sedentary <- as.numeric(threeweeks$Minutes.Sedentary)   ### change to class numeric
+
+threeweeks$Activity.Calories <- as.numeric(threeweeks$Activity.Calories)   ### change to class numeric
 ```
 
 Below are the plots showing the linear relationship between calories burned and the number of floors climbed and below that another plot showing the linear relationship between calories burned and the number of steps taken. The blue line represents the least square line.
 
 
 ```r
-p1 <- threeweeks %>% filter(Calories.Burned > 2000) %>% ggplot(aes(x = Floors, y = Calories.Burned)) + geom_point() + geom_smooth(method = "lm")
+p1 <- threeweeks %>%                            
+        filter(Calories.Burned > 2000) %>%     ### remove days with incomplete data
+        ggplot(aes(x = Floors,                 ### plot number of floors on x axis
+                   y = Calories.Burned)) +     ### plot number of cal burned on y axis
+        geom_point() +                         ### represent data by points
+        geom_smooth(method = "lm")             ### show least square line
 
-p2 <- threeweeks %>% filter(Calories.Burned > 2000) %>% ggplot(aes(x = Steps, y = Calories.Burned)) + geom_point() + geom_smooth(method = "lm")
+p2 <- threeweeks %>%
+        filter(Calories.Burned > 2000) %>%
+        ggplot(aes(x = Steps,                  ### plot number of stepss on x axis
+                   y = Calories.Burned)) +     ### plot number of cal burned on y axis
+        geom_point() +                         ### represent data by points
+        geom_smooth(method = "lm")             ### show least square line
 
-grid.arrange(p1, p2)
+grid.arrange(p1, p2)                           ### show plots in single column 
 ```
 
-![](index_files/figure-html/unnamed-chunk-25-1.png)<!-- -->
+![](index_files/figure-html/unnamed-chunk-24-1.png)<!-- -->
 
 You might be wondering what's the practical use of doing a regression on the number of steps or floors on the amount of calories burned? For me the answer was quite obvious.
 
@@ -579,7 +642,11 @@ Walking an extra block or climbing a couple of flights of stairs in the mall bef
 
 
 ```r
-threeweeks %>% filter(Calories.Burned > 2000) %>% lm(data = ., Calories.Burned ~ Floors) %>% summary()
+threeweeks %>%
+        filter(Calories.Burned > 2000) %>%        ### remove days with incomplete data
+        lm(data = .,                              ### Calories burned as dependent variable
+           Calories.Burned ~ Floors) %>%          ### Floors as independent variable
+        summary()                                 ### show summary of linear regression
 ```
 
 ```
@@ -604,7 +671,11 @@ threeweeks %>% filter(Calories.Burned > 2000) %>% lm(data = ., Calories.Burned ~
 ```
 
 ```r
-threeweeks %>% filter(Calories.Burned > 2000) %>% lm(data = ., Calories.Burned ~ Steps) %>% summary()
+threeweeks %>%
+        filter(Calories.Burned > 2000) %>%        ### remove days with incomplete data
+        lm(data = .,                              ### Calories burned as dependent variable
+           Calories.Burned ~ Steps) %>%           ### Steps as independent variable
+        summary()                                 ### Calories burned as dependent variable
 ```
 
 ```
@@ -636,19 +707,27 @@ One thing that struck me while working as a call center agent was the volume of 
 
 
 ```r
-threeweeks %>% ggplot(aes(x = Date, y = Minutes.Asleep)) + geom_bar(stat = "identity", fill = "steelblue") + geom_hline(yintercept = mean(threeweeks$Minutes.Asleep), color = "salmon") + geom_hline(yintercept = 480, "turquoise")
+threeweeks %>%
+        ggplot(aes(x = Date,                                     ### Plot date on x axis
+                   y = Minutes.Asleep)) +                        ### Plot minutes on y axis
+        geom_bar(stat = "identity",                              ### specify stat as identity
+                 fill = "steelblue") +                           ### specify color of bars
+        geom_hline(yintercept = mean(threeweeks$Minutes.Asleep), ### show mean as horizontal line
+                   color = "salmon") +                           ### color line as salmon
+        geom_hline(yintercept = 480,                             ### horizontal line at 480 minutes
+                   color = "turquoise")                          ### color line as turquoise
 ```
 
-![](index_files/figure-html/unnamed-chunk-27-1.png)<!-- -->
+![](index_files/figure-html/unnamed-chunk-26-1.png)<!-- -->
 
 I was averaging 3.88 hours of sleep (salmon colored horizontal line on the plot) during that three week period but that is inaccurate due to certains days when i failed to wear the tracker while sleeping or had to return the tracker to the company. I remember fondly those rare days when i could get a full 8 hours of sleep (turquoise colored horizontal line on the plot).
 
 
 # Conclusion
 
-Waerable sensors are great motivators for individuals and groups of people to exercise by providing feedback. It can help set goals that are realistic and realizable based on past performance.
+Wearable sensors are great motivators for individuals and groups of people to exercise by providing feedback. It can help set goals that are realistic and realizable based on past performance and provide a measure of one's achievement.
 
-Creating custom visualization in R can help provide greater motivation to perform better during the exercise.
+Creating custom visualization in R is a fun way to view the data one has accumulated.
 
 
 ```r
@@ -680,14 +759,14 @@ sessionInfo()
 ## loaded via a namespace (and not attached):
 ##  [1] progress_1.1.2.9002    rematch2_2.0.1         reshape2_1.4.3        
 ##  [4] lattice_0.20-35        colorspace_1.3-2       htmltools_0.3.6       
-##  [7] mgcv_1.8-17            yaml_2.1.18            utf8_1.1.3            
-## [10] XML_3.98-1.11          rlang_0.2.0.9000       later_0.7.1           
-## [13] pillar_1.2.1           glue_1.2.0             withr_2.1.2           
+##  [7] mgcv_1.8-23            yaml_2.1.19            utf8_1.1.3            
+## [10] XML_3.98-1.11          rlang_0.2.0.9000       later_0.7.2           
+## [13] pillar_1.2.2           glue_1.2.0             withr_2.1.2           
 ## [16] selectr_0.4-1          jpeg_0.1-8             bindr_0.1.1           
 ## [19] plyr_1.8.4             stringr_1.3.0          munsell_0.4.3         
 ## [22] gtable_0.2.0           RgoogleMaps_1.4.1      htmlwidgets_1.2       
 ## [25] evaluate_0.10.1        labeling_0.3           knitr_1.20            
-## [28] httpuv_1.4.0           ansistrings_1.0.0.9000 crosstalk_1.0.0       
+## [28] httpuv_1.4.1           ansistrings_1.0.0.9000 crosstalk_1.0.0       
 ## [31] Rcpp_0.12.16           xtable_1.8-2           promises_1.0.1        
 ## [34] scales_0.5.0.9000      backports_1.1.2        jsonlite_1.5          
 ## [37] mime_0.5               rjson_0.2.15           png_0.1-7             
@@ -695,8 +774,8 @@ sessionInfo()
 ## [43] shiny_1.0.5            grid_3.4.1             rprojroot_1.3-2       
 ## [46] bitops_1.0-6           cli_1.0.0.9001         tools_3.4.1           
 ## [49] magrittr_1.5           lazyeval_0.2.1         tibble_1.4.2          
-## [52] crayon_1.3.4           pkgconfig_2.0.1        Matrix_1.2-10         
+## [52] crayon_1.3.4           pkgconfig_2.0.1        Matrix_1.2-14         
 ## [55] xml2_1.2.0             prettyunits_1.0.2      assertthat_0.2.0      
 ## [58] rmarkdown_1.9.8        rstudioapi_0.7.0-9000  R6_2.2.2              
-## [61] ggmap_2.7.900          nlme_3.1-131           compiler_3.4.1
+## [61] ggmap_2.7.900          nlme_3.1-137           compiler_3.4.1
 ```
