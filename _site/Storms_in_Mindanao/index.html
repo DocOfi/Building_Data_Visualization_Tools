@@ -1,0 +1,251 @@
+<h1 id="synopsis">Synopsis</h1>
+
+<p>I was once asked to give a series of talks in several cities in the southern group of islands in the Philippines known as Mindanao. The people of Mindanao prided themselves with perfect weather the whole year round. They said that typhoons rarely visited them and I wanted to know if this was true.</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">library</span><span class="p">(</span><span class="n">lubridate</span><span class="p">)</span><span class="w">
+</span><span class="n">library</span><span class="p">(</span><span class="n">dplyr</span><span class="p">)</span><span class="w">
+</span><span class="n">library</span><span class="p">(</span><span class="n">ggplot2</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<h1 id="the-data">The data</h1>
+
+<p><br /></p>
+
+<p>Our data we will be using for this exercise comes from the <a href="http://www.noaa.gov/">National Oceanic and Atmospheric Administration</a> and is commonly referred to as IBTrACS.  IBTrACS or International Best Track Archive for Climate Stewardship contains data from all official Tropical Cyclone Warning Centers (TCWCs) and the WMO Regional Specialized Meteorological Centers (RSMCs) who are responsible for developing and archiving best track data worldwide. The dataset period is from 1848 to the present.</p>
+
+<p>We will be using the IBTrACS-WMO (World Meterological Organization) version of the data from the Western Pacific basin which can be downloaded from ftp://eclipse.ncdc.noaa.gov/pub/ibtracs/v03r10/wmo/csv/basin/Basin.WP.ibtracs_wmo.v03r10.csv</p>
+
+<p><br /></p>
+
+<h1 id="reading-in-the-data">Reading in the data</h1>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">library</span><span class="p">(</span><span class="n">lubridate</span><span class="p">)</span><span class="w">
+</span><span class="n">library</span><span class="p">(</span><span class="n">dplyr</span><span class="p">)</span><span class="w">
+</span><span class="n">library</span><span class="p">(</span><span class="n">ggplot2</span><span class="p">)</span><span class="w">
+
+</span><span class="n">wpacific</span><span class="o">&lt;-</span><span class="n">read.csv</span><span class="p">(</span><span class="s2">"Basin.WP.ibtracs_wmo.v03r03.csv"</span><span class="p">,</span><span class="w">
+                   </span><span class="n">stringsAsFactors</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">FALSE</span><span class="p">,</span><span class="w">
+                   </span><span class="n">skip</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1</span><span class="p">)</span><span class="w">   </span><span class="c1">### 1st row only title                  </span><span class="w">
+</span><span class="n">units</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">wpacific</span><span class="p">[</span><span class="m">1</span><span class="p">,</span><span class="w"> </span><span class="p">]</span><span class="w">
+</span><span class="n">units</span><span class="w">
+</span></code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>##   Serial_Num Season Num Basin Sub_basin Name            ISO_time Nature
+## 1        N/A   Year   #    BB        BB  N/A YYYY-MM-DD HH:MM:SS    N/A
+##    Latitude Longitude Wind.WMO. Pres.WMO. Center Wind.WMO..Percentile
+## 1 deg_north  deg_east        kt        mb    N/A                    %
+##   Pres.WMO..Percentile Track.type
+## 1                    %        N/A
+</code></pre></div></div>
+
+<p><br /></p>
+
+<p>The first line of the downloaded file contains the title of the dataset.  We’ll skip that line to facilitate reading the data correctly. The second line of the data contains the units for each of the variables.  We’ll skip that one as well.</p>
+
+<p><br /></p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">wpacific</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">wpacific</span><span class="p">[</span><span class="m">-1</span><span class="p">,</span><span class="w"> </span><span class="p">]</span><span class="w">
+</span><span class="n">str</span><span class="p">(</span><span class="n">wpacific</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>## 'data.frame':	56095 obs. of  16 variables:
+##  $ Serial_Num          : chr  "1951050N20139" "1951050N20139" "1951050N20139" "1951050N20139" ...
+##  $ Season              : chr  "1951" "1951" "1951" "1951" ...
+##  $ Num                 : chr  "01" "01" "01" "01" ...
+##  $ Basin               : chr  " WP" " WP" " WP" " WP" ...
+##  $ Sub_basin           : chr  " MM" " MM" " MM" " MM" ...
+##  $ Name                : chr  "NOT NAMED" "NOT NAMED" "NOT NAMED" "NOT NAMED" ...
+##  $ ISO_time            : chr  "1951-02-19 06:00:00" "1951-02-19 12:00:00" "1951-02-19 18:00:00" "1951-02-20 00:00:00" ...
+##  $ Nature              : chr  " TS" " TS" " TS" " NR" ...
+##  $ Latitude            : chr  " 20.00" " 20.00" " 23.00" " 25.00" ...
+##  $ Longitude           : chr  " 138.50" " 138.50" " 142.10" " 146.00" ...
+##  $ Wind.WMO.           : chr  "  0.0" "  0.0" "  0.0" "  0.0" ...
+##  $ Pres.WMO.           : chr  " 1010.0" " 1010.0" " 1000.0" "  994.0" ...
+##  $ Center              : chr  "tokyo" "tokyo" "tokyo" "tokyo" ...
+##  $ Wind.WMO..Percentile: chr  "-100.000" "-100.000" "-100.000" "-100.000" ...
+##  $ Pres.WMO..Percentile: chr  "   0.876" "   0.876" "  20.665" "  39.411" ...
+##  $ Track.type          : chr  "main" "main" "main" "main" ...
+</code></pre></div></div>
+
+<p>Here’s a list of the variables in the data but since I’ll be plotting only the path of the different hurricanes/typhoon that crosses the Philippine archipelago, we’re only interested in the variables: Serial_Num, Season, ISO_time, Latitude and Longitude</p>
+
+<p><br /></p>
+
+<h2 id="tidying-data">Tidying Data</h2>
+
+<p><br /></p>
+
+<p>We need to clean the data a bit by setting the variables to their right classes.</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">wpacific</span><span class="o">$</span><span class="n">Pres.WMO..Percentile</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">as.numeric</span><span class="p">(</span><span class="n">wpacific</span><span class="o">$</span><span class="n">Pres.WMO..Percentile</span><span class="p">)</span><span class="w">
+</span><span class="n">wpacific</span><span class="o">$</span><span class="n">Wind.WMO..Percentile</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">as.numeric</span><span class="p">(</span><span class="n">wpacific</span><span class="o">$</span><span class="n">Wind.WMO..Percentile</span><span class="p">)</span><span class="w">
+</span><span class="n">wpacific</span><span class="o">$</span><span class="n">Pres.WMO.</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">as.numeric</span><span class="p">(</span><span class="n">wpacific</span><span class="o">$</span><span class="n">Pres.WMO.</span><span class="p">)</span><span class="w">
+</span><span class="n">wpacific</span><span class="o">$</span><span class="n">Wind.WMO.</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">as.numeric</span><span class="p">(</span><span class="n">wpacific</span><span class="o">$</span><span class="n">Wind.WMO.</span><span class="p">)</span><span class="w">
+</span><span class="n">wpacific</span><span class="o">$</span><span class="n">Longitude</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">as.numeric</span><span class="p">(</span><span class="n">wpacific</span><span class="o">$</span><span class="n">Longitude</span><span class="p">)</span><span class="w">
+</span><span class="n">wpacific</span><span class="o">$</span><span class="n">Latitude</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">as.numeric</span><span class="p">(</span><span class="n">wpacific</span><span class="o">$</span><span class="n">Latitude</span><span class="p">)</span><span class="w">
+</span><span class="n">wpacific</span><span class="o">$</span><span class="n">Serial_Num</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">as.numeric</span><span class="p">(</span><span class="n">wpacific</span><span class="o">$</span><span class="n">Serial_Num</span><span class="p">)</span><span class="w">
+</span><span class="n">wpacific</span><span class="o">$</span><span class="n">Season</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">as.numeric</span><span class="p">(</span><span class="n">wpacific</span><span class="o">$</span><span class="n">Season</span><span class="p">)</span><span class="w">
+</span><span class="n">wpacific</span><span class="o">$</span><span class="n">Num</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">as.numeric</span><span class="p">(</span><span class="n">wpacific</span><span class="o">$</span><span class="n">Num</span><span class="p">)</span><span class="w">
+</span><span class="n">wpacific</span><span class="o">$</span><span class="n">ISO_time</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">ymd_hms</span><span class="p">(</span><span class="n">wpacific</span><span class="o">$</span><span class="n">ISO_time</span><span class="p">)</span><span class="w">
+</span><span class="n">wpacific</span><span class="o">$</span><span class="n">month</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">month</span><span class="p">(</span><span class="n">wpacific</span><span class="o">$</span><span class="n">ISO_time</span><span class="p">)</span><span class="w">
+</span><span class="n">wpacific</span><span class="o">$</span><span class="n">yr_name</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">paste</span><span class="p">(</span><span class="n">wpacific</span><span class="o">$</span><span class="n">Season</span><span class="p">,</span><span class="w">
+                          </span><span class="n">wpacific</span><span class="o">$</span><span class="n">Name</span><span class="p">,</span><span class="w">
+                          </span><span class="n">sep</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"_"</span><span class="p">)</span><span class="w">
+</span><span class="n">yr1990to2010</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">wpacific</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w"> </span><span class="n">filter</span><span class="p">(</span><span class="n">Season</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="m">1990</span><span class="p">)</span><span class="w">
+
+</span><span class="n">yr1990to2010</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+        </span><span class="n">select</span><span class="p">(</span><span class="n">yr_name</span><span class="p">,</span><span class="w">
+               </span><span class="n">Serial_Num</span><span class="p">,</span><span class="w">
+               </span><span class="n">Latitude</span><span class="p">,</span><span class="w">
+               </span><span class="n">Longitude</span><span class="p">,</span><span class="w">
+               </span><span class="n">Wind.WMO.</span><span class="p">)</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+        </span><span class="n">slice</span><span class="p">(</span><span class="nf">c</span><span class="p">(</span><span class="m">1</span><span class="o">:</span><span class="m">6</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="n">n</span><span class="p">()</span><span class="m">-6</span><span class="p">)</span><span class="o">:</span><span class="n">n</span><span class="p">()))</span><span class="w">
+</span></code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>## # A tibble: 13 x 5
+##    yr_name           Serial_Num Latitude Longitude Wind.WMO.
+##    &lt;chr&gt;                  &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
+##  1 1990_KORYN                NA     7.00       153       0  
+##  2 1990_KORYN                NA     7.00       152       0  
+##  3 1990_KORYN                NA     8.00       152       0  
+##  4 1990_KORYN                NA     8.50       150       0  
+##  5 1990_KORYN                NA     9.00       150       0  
+##  6 1990_KORYN                NA     9.70       148      35.0
+##  7 2010_OMEKA:TD1219         NA    25.4       -174      35.0
+##  8 2010_OMEKA:TD1219         NA    27.0       -173      35.0
+##  9 2010_OMEKA:TD1219         NA    29.0       -173      35.0
+## 10 2010_OMEKA:TD1219         NA    30.7       -172      30.0
+## 11 2010_OMEKA:TD1219         NA    32.2       -172      30.0
+## 12 2010_OMEKA:TD1219         NA    33.3       -172      25.0
+## 13 2010_OMEKA:TD1219         NA    34.1       -172      25.0
+</code></pre></div></div>
+
+<p><br /></p>
+
+<p>We are ready to plot</p>
+
+<h1 id="plotting-typhoons">Plotting Typhoons</h1>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">phil_map</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">readRDS</span><span class="p">(</span><span class="s2">"PHL_adm2.rds"</span><span class="p">)</span><span class="w">
+</span><span class="n">phil_mapdf</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">fortify</span><span class="p">(</span><span class="n">phil_map</span><span class="p">)</span><span class="w">
+</span><span class="n">g</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">phil_mapdf</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w"> 
+ </span><span class="n">ggplot</span><span class="p">(</span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">long</span><span class="p">,</span><span class="w">
+            </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lat</span><span class="p">,</span><span class="w">
+            </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">group</span><span class="p">))</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">geom_polygon</span><span class="p">(</span><span class="n">fill</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"gray25"</span><span class="p">,</span><span class="w">
+                     </span><span class="n">colour</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"gray25"</span><span class="p">,</span><span class="w">
+                     </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0.2</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">geom_path</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">yr1990to2010</span><span class="p">,</span><span class="w">
+                  </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Longitude</span><span class="p">,</span><span class="w">
+           </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Latitude</span><span class="p">,</span><span class="w"> </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Serial_Num</span><span class="p">,</span><span class="w">
+                      </span><span class="n">colour</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Wind.WMO.</span><span class="p">),</span><span class="w">
+                  </span><span class="n">alpha</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0.5</span><span class="p">,</span><span class="w">
+                  </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0.8</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">xlim</span><span class="p">(</span><span class="m">110</span><span class="p">,</span><span class="w"> </span><span class="m">130</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">ylim</span><span class="p">(</span><span class="m">4</span><span class="p">,</span><span class="w"> </span><span class="m">20</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">labs</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+             </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+             </span><span class="n">colour</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Wind \n(knots)"</span><span class="p">)</span><span class="w">
+
+</span><span class="n">mindanao</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="s2">"Agusan del Norte"</span><span class="p">,</span><span class="w">
+              </span><span class="s2">"Agusan del Sur"</span><span class="p">,</span><span class="w">
+              </span><span class="s2">"Basilan"</span><span class="p">,</span><span class="w">
+              </span><span class="s2">"Bukidnon"</span><span class="p">,</span><span class="w">
+              </span><span class="s2">"Camiguin"</span><span class="p">,</span><span class="w">
+              </span><span class="s2">"Compostela Valley"</span><span class="p">,</span><span class="w">
+              </span><span class="s2">"Davao del Norte"</span><span class="p">,</span><span class="w">
+              </span><span class="s2">"Davao del Sur"</span><span class="p">,</span><span class="w">
+              </span><span class="s2">"Davao Oriental"</span><span class="p">,</span><span class="w">
+              </span><span class="s2">"Dinagat Islands"</span><span class="p">,</span><span class="w">
+              </span><span class="s2">"Lanao del Norte"</span><span class="p">,</span><span class="w">
+              </span><span class="s2">"Lanao del Sur"</span><span class="p">,</span><span class="w">
+              </span><span class="s2">"Maguindanao"</span><span class="p">,</span><span class="w">
+              </span><span class="s2">"Misamis Occidental"</span><span class="p">,</span><span class="w">
+              </span><span class="s2">"Misamis Oriental"</span><span class="p">,</span><span class="w">
+              </span><span class="s2">"North Cotabato"</span><span class="p">,</span><span class="w">
+              </span><span class="s2">"Sarangani"</span><span class="p">,</span><span class="w">
+              </span><span class="s2">"South Cotabato"</span><span class="p">,</span><span class="w">
+              </span><span class="s2">"Sultan Kudarat"</span><span class="p">,</span><span class="w">
+              </span><span class="s2">"Sulu"</span><span class="p">,</span><span class="w">
+              </span><span class="s2">"Surigao del Norte"</span><span class="p">,</span><span class="w">
+              </span><span class="s2">"Surigao del Sur"</span><span class="p">,</span><span class="w">
+              </span><span class="s2">"Tawi-Tawi"</span><span class="p">,</span><span class="w">
+              </span><span class="s2">"Zamboanga del Norte"</span><span class="p">,</span><span class="w">
+              </span><span class="s2">"Zamboanga del Sur"</span><span class="p">,</span><span class="w">
+              </span><span class="s2">"Zamboanga Sibugay"</span><span class="p">)</span><span class="w">
+</span><span class="n">min_provs</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">phil_map</span><span class="p">[</span><span class="n">phil_map</span><span class="o">$</span><span class="n">NAME_1</span><span class="w"> </span><span class="o">%in%</span><span class="w"> </span><span class="n">mindanao</span><span class="p">,</span><span class="w"> </span><span class="p">]</span><span class="w">
+</span><span class="n">min_provdf</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">fortify</span><span class="p">(</span><span class="n">min_provs</span><span class="p">)</span><span class="w">
+
+</span><span class="n">g</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">theme_classic</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">theme</span><span class="p">(</span><span class="n">axis.line</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_blank</span><span class="p">(),</span><span class="w">
+        </span><span class="n">axis.text</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_blank</span><span class="p">(),</span><span class="w">
+        </span><span class="n">axis.ticks</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_blank</span><span class="p">(),</span><span class="w">
+        </span><span class="n">plot.margin</span><span class="o">=</span><span class="n">unit</span><span class="p">(</span><span class="nf">c</span><span class="p">(</span><span class="m">3</span><span class="p">,</span><span class="w"> </span><span class="m">0</span><span class="p">,</span><span class="w"> </span><span class="m">0</span><span class="p">,</span><span class="w"> </span><span class="m">0</span><span class="p">),</span><span class="w">
+                         </span><span class="s2">"mm"</span><span class="p">),</span><span class="w">
+        </span><span class="n">legend.text</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_text</span><span class="p">(</span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">6</span><span class="p">),</span><span class="w">
+        </span><span class="n">legend.direction</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"horizontal"</span><span class="p">,</span><span class="w">
+        </span><span class="n">legend.position</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="m">0.20</span><span class="p">,</span><span class="w"> </span><span class="m">0.15</span><span class="p">),</span><span class="w">
+        </span><span class="n">legend.title</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_text</span><span class="p">(</span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">8</span><span class="p">,</span><span class="w">
+                                    </span><span class="n">face</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"plain"</span><span class="p">),</span><span class="w">
+        </span><span class="n">panel.background</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_rect</span><span class="p">(</span><span class="n">fill</span><span class="o">=</span><span class="s1">'black'</span><span class="p">))</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">geom_text</span><span class="p">(</span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">112</span><span class="n">.</span><span class="p">,</span><span class="w">
+                      </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">4</span><span class="p">),</span><span class="w">
+                  </span><span class="n">label</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Hurricanes 1999-2010, Philippines"</span><span class="p">,</span><span class="w">
+                  </span><span class="n">color</span><span class="o">=</span><span class="s2">"white"</span><span class="p">,</span><span class="w">
+                  </span><span class="n">hjust</span><span class="o">=</span><span class="m">0</span><span class="p">,</span><span class="w">
+                  </span><span class="n">size</span><span class="o">=</span><span class="m">3.5</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">geom_polygon</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">min_provs</span><span class="p">,</span><span class="w"> 
+                     </span><span class="n">fill</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"springgreen"</span><span class="p">,</span><span class="w">
+                     </span><span class="n">colour</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"springgreen"</span><span class="p">,</span><span class="w">
+                     </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0.2</span><span class="p">,</span><span class="w">
+                     </span><span class="n">alpha</span><span class="w"> </span><span class="o">=</span><span class="m">0.02</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="index_files/figure-html/gggg-1.png" alt="" /><!-- --></p>
+
+<p><br /></p>
+
+<p>I guess the people of Mindanao are correct in boasting that typhoons rarely visit their province.</p>
+
+<p><br /></p>
+
+<h1 id="plotting-storms-by-year">Plotting storms by year</h1>
+
+<p><br /></p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">g</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">theme_classic</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">theme</span><span class="p">(</span><span class="n">axis.line</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_blank</span><span class="p">(),</span><span class="w">
+        </span><span class="n">axis.text</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_blank</span><span class="p">(),</span><span class="w">
+        </span><span class="n">axis.ticks</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_blank</span><span class="p">(),</span><span class="w">
+        </span><span class="n">plot.margin</span><span class="o">=</span><span class="n">unit</span><span class="p">(</span><span class="nf">c</span><span class="p">(</span><span class="m">3</span><span class="p">,</span><span class="w"> </span><span class="m">0</span><span class="p">,</span><span class="w"> </span><span class="m">0</span><span class="p">,</span><span class="w"> </span><span class="m">0</span><span class="p">),</span><span class="w">
+                         </span><span class="s2">"mm"</span><span class="p">),</span><span class="w">
+        </span><span class="n">legend.text</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_text</span><span class="p">(</span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">6</span><span class="p">),</span><span class="w">
+        </span><span class="n">legend.direction</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"horizontal"</span><span class="p">,</span><span class="w">
+        </span><span class="n">legend.position</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"bottom"</span><span class="p">,</span><span class="w">
+        </span><span class="n">legend.title</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_text</span><span class="p">(</span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">8</span><span class="p">,</span><span class="w">
+                                    </span><span class="n">face</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"plain"</span><span class="p">),</span><span class="w">
+        </span><span class="n">panel.background</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_rect</span><span class="p">(</span><span class="n">fill</span><span class="o">=</span><span class="s1">'black'</span><span class="p">))</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">geom_polygon</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">min_provs</span><span class="p">,</span><span class="w"> 
+                     </span><span class="n">fill</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"springgreen"</span><span class="p">,</span><span class="w">
+                     </span><span class="n">colour</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"springgreen"</span><span class="p">,</span><span class="w">
+                     </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0.2</span><span class="p">,</span><span class="w">
+                     </span><span class="n">alpha</span><span class="w"> </span><span class="o">=</span><span class="m">0.02</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">facet_wrap</span><span class="p">(</span><span class="o">~</span><span class="n">Season</span><span class="p">,</span><span class="w"> </span><span class="n">nrow</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">7</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="index_files/figure-html/facetmap-1.png" alt="" /><!-- --></p>
+
+<p><br /></p>
+
+<p>Looking at the plot of storms per year, it seems there is quite a bit of variability in the number of storms that cross the Philippines each year. This lead me to ask what’s the mean number of storms that cross the Philippines per year, per month?  Which month has the highest mean number of storms?  Based on historical data what is the probability that in a a given year, a storm in the pacific basin will enter the philippines airspace or cross the island of Mindanao.</p>
+
+<p>I’ll answer these questions in a later project. For now, I’ll just be content to be happy for the great weather the Lumads, Christian, and Muslim people of Mindanao are enjoying.</p>
+
+<h1 id="references">References</h1>
+
+<p>Schreck, Carl &amp; National Center for Atmospheric Research Staff (Eds). Last modified 06 Nov 2013. “The Climate Data Guide: IBTrACS: Tropical cyclone best track data.” Retrieved from https://climatedataguide.ucar.edu/climate-data/ibtracs-tropical-cyclone-best-track-data.</p>
+
+<p><a href="https://rpubs.com/gaston/hurricanes">Visualizing Hurricane Trajectories</a>
+by: Gaston Sanchez</p>
+
+<p><a href="http://david-lallemant.com/tag/earthquakes/">Mapping Global Earthquakes and Hurricane tracks with R</a></p>

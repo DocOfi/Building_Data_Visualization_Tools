@@ -1,0 +1,912 @@
+<h1 id="synopsis">Synopsis</h1>
+
+<p>While I was browsing the internet to complete my notes in my recently concluded course in Coursera, Building Data Visualization Tools, I came across a <a href="https://erikafille.ph/2017/01/18/earthquake-maps-in-r/">presentation</a>  by Erika Fille using R that used data from the Philippines. I didn’t have an inkiling were to obtain data locally, and decided to try duplicating the presentation using what I have recently learned about mapping in R.</p>
+
+<h2 id="loading-packages">Loading Packages</h2>
+
+<p>At the start I only wanted to duplicate the presentation which was done using packages included in base R.  However, the richness of R has grown over the past years that newer packages offer something new, different and definitely worth exploring. Join me as we explore the many fascinating ways to make maps in R.</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">library</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span><span class="w">
+</span><span class="n">library</span><span class="p">(</span><span class="n">rmarkdown</span><span class="p">)</span><span class="w">
+</span><span class="n">library</span><span class="p">(</span><span class="n">dplyr</span><span class="p">)</span><span class="w">
+</span><span class="n">library</span><span class="p">(</span><span class="n">lubridate</span><span class="p">)</span><span class="w">
+</span><span class="n">library</span><span class="p">(</span><span class="n">ggmap</span><span class="p">)</span><span class="w">
+</span><span class="n">library</span><span class="p">(</span><span class="n">ggplot2</span><span class="p">)</span><span class="w">
+</span><span class="n">library</span><span class="p">(</span><span class="n">viridis</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<h2 id="downloading-the-data">Downloading the data</h2>
+
+<p>The data for this presentation was downloaded from the <a href="https://earthquake.usgs.gov/">USGS</a> Search Earthquake Catalog website https://earthquake.usgs.gov/earthquakes/search/ and contains a record of all earthquakes that occured around the island of Bohol from October 15, 2015 to October 17, 2015.</p>
+
+<p>The following search parameters were used and a square was drawn over the map of Bohol and its neighboring areas:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: center">parameter</th>
+      <th style="text-align: left">value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: center">Minimum Magnitude</td>
+      <td style="text-align: left">2.5</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">Start Date/Time</td>
+      <td style="text-align: left">(UTC) 2013-10-15 00:00:00</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">End  Date/Time</td>
+      <td style="text-align: left">(UTC) 2013-10-17 00:00:00</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">Oct_2015_Quake</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">read.csv</span><span class="p">(</span><span class="s2">"query.csv"</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<h2 id="variables-in-the-dataset-and-their-meanings">Variables in the dataset and their meanings</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th style="text-align: center">variable</th>
+      <th style="text-align: left">description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="text-align: center">time</td>
+      <td style="text-align: left">Time when the event occurred. Times are reported in milliseconds since the epoch ( 1970-01-01T00:00:00.000Z), and do not include leap seconds. In certain output formats, the date is formatted for readability.</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">latitude</td>
+      <td style="text-align: left">Decimal degrees latitude. Negative values for southern latitudes.</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">longitude</td>
+      <td style="text-align: left">Decimal degrees longitude. Negative values for western longitudes.</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">depth</td>
+      <td style="text-align: left">Depth of the event in kilometers.</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">mag</td>
+      <td style="text-align: left">The magnitude for the event.</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">magtype</td>
+      <td style="text-align: left">The method or algorithm used to calculate the preferred magnitude for the event.</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">nst</td>
+      <td style="text-align: left">The total number of seismic stations used to determine earthquake location.</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">gap</td>
+      <td style="text-align: left">The largest azimuthal gap between azimuthally adjacent stations (in degrees).</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">dmin</td>
+      <td style="text-align: left">Horizontal distance from the epicenter to the nearest station (in degrees). 1 degree is approximately 111.2 kilometers.</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">rms</td>
+      <td style="text-align: left">The root-mean-square (RMS) travel time residual, in sec, using all weights. This parameter provides a measure of the fit of the observed arrival times to the predicted arrival times for this location.</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">net</td>
+      <td style="text-align: left">The ID of a data contributor. Identifies the network considered to be the preferred source of information for this event.</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">id</td>
+      <td style="text-align: left">A unique identifier for the event.</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">updated</td>
+      <td style="text-align: left">Time when the event was most recently updated.</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">place</td>
+      <td style="text-align: left">Textual description of named geographic region near to the event.</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">type</td>
+      <td style="text-align: left">Type of seismic event.</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">horizontaError</td>
+      <td style="text-align: left">The horizontal location error, in km, defined as the length of the largest projection of the three principal errors on a horizontal plane.</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">depthError</td>
+      <td style="text-align: left">Uncertainty of reported depth of the event in kilometers.</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">magError</td>
+      <td style="text-align: left">Uncertainty of reported magnitude of the event. The estimated standard error of the magnitude.</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">magNst</td>
+      <td style="text-align: left">The total number of seismic stations used to calculate the magnitude for this earthquake.</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">status</td>
+      <td style="text-align: left">Indicates whether the event has been reviewed by a human.</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">locationsource</td>
+      <td style="text-align: left">The network that originally authored the reported location of this event.</td>
+    </tr>
+    <tr>
+      <td style="text-align: center">magSource</td>
+      <td style="text-align: left">The root-mean-square (RMS) travel time residual, in sec, using all weights. This parameter provides a measure of the fit of the observed arrival times to the predicted arrival times for this location.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>NOTE</strong> Information about the variables were obtained from https://earthquake.usgs.gov/data/comcat/data-eventterms.php</p>
+
+<h2 id="structure-of-our-data">Structure of our data</h2>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">str</span><span class="p">(</span><span class="n">Oct_2015_Quake</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>## 'data.frame':	83 obs. of  22 variables:
+##  $ time           : Factor w/ 83 levels "2013-10-15T00:12:32.050Z",..: 83 82 81 80 79 78 77 76 75 74 ...
+##  $ latitude       : num  9.7 9.93 9.77 9.89 9.82 ...
+##  $ longitude      : num  124 124 124 124 124 ...
+##  $ depth          : num  10 24.4 10 21 24 ...
+##  $ mag            : num  5.3 4.9 4.8 4.8 4.5 4.9 4.6 5.2 4.9 4.6 ...
+##  $ magType        : Factor w/ 3 levels "mb","mwb","mww": 1 1 1 1 1 1 1 1 1 1 ...
+##  $ nst            : logi  NA NA NA NA NA NA ...
+##  $ gap            : int  43 71 112 103 148 67 174 72 78 77 ...
+##  $ dmin           : num  3.16 3.25 3.34 3.18 8.48 ...
+##  $ rms            : num  1.39 1.29 0.63 0.55 0.79 1.09 0.91 0.78 0.81 0.81 ...
+##  $ net            : Factor w/ 1 level "us": 1 1 1 1 1 1 1 1 1 1 ...
+##  $ id             : Factor w/ 83 levels "usb000kdb4","usb000kdbw",..: 38 37 83 36 82 35 81 34 33 32 ...
+##  $ updated        : Factor w/ 14 levels "2013-12-30T23:41:07.000Z",..: 6 5 5 5 5 5 5 5 4 4 ...
+##  $ place          : Factor w/ 80 levels "0km ENE of Catigbian, Philippines",..: 66 25 31 38 45 28 12 9 17 73 ...
+##  $ type           : Factor w/ 1 level "earthquake": 1 1 1 1 1 1 1 1 1 1 ...
+##  $ horizontalError: logi  NA NA NA NA NA NA ...
+##  $ depthError     : num  1.6 2.5 1.5 4 10.1 2.7 3.1 1.7 1.8 4.1 ...
+##  $ magError       : num  0.048 0.066 0.134 0.088 0.18 0.076 0.207 0.052 0.07 0.105 ...
+##  $ magNst         : logi  NA NA NA NA NA NA ...
+##  $ status         : Factor w/ 1 level "reviewed": 1 1 1 1 1 1 1 1 1 1 ...
+##  $ locationSource : Factor w/ 1 level "us": 1 1 1 1 1 1 1 1 1 1 ...
+##  $ magSource      : Factor w/ 1 level "us": 1 1 1 1 1 1 1 1 1 1 ...
+</code></pre></div></div>
+
+<h2 id="first-six-rows-of-the-data">First six rows of the data</h2>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">head</span><span class="p">(</span><span class="n">Oct_2015_Quake</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>##                       time latitude longitude depth mag magType nst gap
+## 1 2013-10-16T23:37:28.370Z   9.7020  123.7936 10.00 5.3      mb  NA  43
+## 2 2013-10-16T22:19:12.410Z   9.9295  123.9820 24.42 4.9      mb  NA  71
+## 3 2013-10-16T18:57:59.450Z   9.7679  123.5686 10.00 4.8      mb  NA 112
+## 4 2013-10-16T17:04:31.940Z   9.8926  124.0694 20.96 4.8      mb  NA 103
+## 5 2013-10-16T15:35:33.090Z   9.8188  123.8910 24.02 4.5      mb  NA 148
+## 6 2013-10-16T15:32:45.430Z   9.5926  123.7010 20.22 4.9      mb  NA  67
+##    dmin  rms net         id                  updated
+## 1 3.156 1.39  us usb000kfbv 2015-01-30T04:34:03.305Z
+## 2 3.250 1.29  us usb000kfad 2013-12-30T23:41:11.000Z
+## 3 3.338 0.63  us usc000kpb6 2013-12-30T23:41:11.000Z
+## 4 3.177 0.55  us usb000kevr 2013-12-30T23:41:11.000Z
+## 5 8.476 0.79  us usc000kpaz 2013-12-30T23:41:11.000Z
+## 6 3.120 1.09  us usb000kesc 2013-12-30T23:41:11.000Z
+##                               place       type horizontalError depthError
+## 1       6km SW of Bood, Philippines earthquake              NA        1.6
+## 2  2km S of Panaytayon, Philippines earthquake              NA        2.5
+## 3 3km ENE of Dalaguete, Philippines earthquake              NA        1.5
+## 4   3km SW of Sagbayan, Philippines earthquake              NA        4.0
+## 5 4km NNW of Antequera, Philippines earthquake              NA       10.1
+## 6       2km W of Duljo, Philippines earthquake              NA        2.7
+##   magError magNst   status locationSource magSource
+## 1    0.048     NA reviewed             us        us
+## 2    0.066     NA reviewed             us        us
+## 3    0.134     NA reviewed             us        us
+## 4    0.088     NA reviewed             us        us
+## 5    0.180     NA reviewed             us        us
+## 6    0.076     NA reviewed             us        us
+</code></pre></div></div>
+
+<h1 id="tidying-the-data">Tidying the data</h1>
+
+<p>While reading the function in R using the function <code class="highlighter-rouge">read.csv</code>, i forgot to specify the argument <code class="highlighter-rouge">stringsAsFactors = FALSE</code> and we ended up with a lot of factor variables as shown by the output of the function <code class="highlighter-rouge">str</code> above. Fortunately we only need a few variables for our purpose of plotting the 2013 Bohol Earthquake.</p>
+
+<p>The variable <code class="highlighter-rouge">time</code> is read in as a factor variable and in order for that variable to convey the quantity of time, we need to change it to a class that conveys the sequence, continuity, and passage of time. Furthermore, it uses UTC or Coordinated Universal Time.  UTC is the time standard for which the world regulates clocks and time. Philippine Standard Time (PST) is eight hours ahead of UTC. Since R does not recognize <code class="highlighter-rouge">PST</code> as a time zone, we will use <code class="highlighter-rouge">Asia/Taipei</code> instead.</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">Oct_2015_Quake</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">Oct_2015_Quake</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+        </span><span class="n">mutate</span><span class="p">(</span><span class="n">date_time</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ymd_hms</span><span class="p">(</span><span class="n">time</span><span class="p">,</span><span class="w"> </span><span class="n">tz</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Asia/Taipei"</span><span class="p">))</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w"> </span><span class="c1">### convert to dttm class</span><span class="w">
+        </span><span class="n">mutate</span><span class="p">(</span><span class="n">date</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">date</span><span class="p">(</span><span class="n">date_time</span><span class="p">),</span><span class="w">                            </span><span class="c1">### separate date</span><span class="w">
+               </span><span class="n">hr</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">hour</span><span class="p">(</span><span class="n">date_time</span><span class="p">),</span><span class="w">                              </span><span class="c1">### separate hour</span><span class="w">
+               </span><span class="n">mins</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">minute</span><span class="p">(</span><span class="n">date_time</span><span class="p">),</span><span class="w">                          </span><span class="c1">### separate minutes</span><span class="w">
+               </span><span class="n">secs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">second</span><span class="p">(</span><span class="n">date_time</span><span class="p">))</span><span class="w">                          </span><span class="c1">### separate seconds</span><span class="w">
+</span></code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>## Date in ISO8601 format; converting timezone from UTC to "Asia/Taipei".
+</code></pre></div></div>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">summary</span><span class="p">(</span><span class="n">Oct_2015_Quake</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>##                        time       latitude        longitude    
+##  2013-10-15T00:12:32.050Z: 1   Min.   : 9.484   Min.   :123.3  
+##  2013-10-15T00:17:39.940Z: 1   1st Qu.: 9.746   1st Qu.:123.8  
+##  2013-10-15T00:18:51.590Z: 1   Median : 9.863   Median :124.1  
+##  2013-10-15T00:19:26.590Z: 1   Mean   : 9.863   Mean   :124.1  
+##  2013-10-15T00:20:27.710Z: 1   3rd Qu.: 9.953   3rd Qu.:124.2  
+##  2013-10-15T00:22:21.480Z: 1   Max.   :10.303   Max.   :125.2  
+##  (Other)                 :77                                   
+##      depth            mag        magType    nst               gap       
+##  Min.   : 4.88   Min.   :4.000   mb :80   Mode:logical   Min.   : 12.0  
+##  1st Qu.:10.00   1st Qu.:4.400   mwb: 1   NA's:83        1st Qu.: 72.5  
+##  Median :10.00   Median :4.600   mww: 2                  Median :100.0  
+##  Mean   :13.99   Mean   :4.702                           Mean   :104.1  
+##  3rd Qu.:20.00   3rd Qu.:4.900                           3rd Qu.:130.5  
+##  Max.   :29.09   Max.   :7.100                           Max.   :193.0  
+##                                                                         
+##       dmin             rms         net              id    
+##  Min.   : 2.821   Min.   :0.3100   us:83   usb000kdb4: 1  
+##  1st Qu.: 3.134   1st Qu.:0.7250           usb000kdbw: 1  
+##  Median : 3.191   Median :0.8600           usb000kdca: 1  
+##  Mean   : 4.302   Mean   :0.8776           usb000kdd6: 1  
+##  3rd Qu.: 3.291   3rd Qu.:1.0450           usb000kdda: 1  
+##  Max.   :21.613   Max.   :1.5100           usb000kddn: 1  
+##                                            (Other)   :77  
+##                      updated                                  place   
+##  2013-12-30T23:41:08.000Z:25   11km WNW of Duljo, Philippines    : 2  
+##  2013-12-30T23:41:09.000Z:17   3km ENE of San Miguel, Philippines: 2  
+##  2013-12-30T23:41:07.000Z:15   6km N of Nueva Fuerza, Philippines: 2  
+##  2013-12-30T23:41:10.000Z:10   0km ENE of Catigbian, Philippines : 1  
+##  2013-12-30T23:41:11.000Z: 7   0km ESE of San Isidro, Philippines: 1  
+##  2015-01-30T04:34:03.305Z: 1   0km N of Danao, Philippines       : 1  
+##  (Other)                 : 8   (Other)                           :74  
+##          type    horizontalError   depthError        magError     
+##  earthquake:83   Mode:logical    Min.   : 1.300   Min.   :0.0480  
+##                  NA's:83         1st Qu.: 1.800   1st Qu.:0.0770  
+##                                  Median : 1.900   Median :0.1200  
+##                                  Mean   : 2.778   Mean   :0.1289  
+##                                  3rd Qu.: 3.150   3rd Qu.:0.1620  
+##                                  Max.   :10.600   Max.   :0.5190  
+##                                                   NA's   :2       
+##   magNst             status   locationSource magSource
+##  Mode:logical   reviewed:83   us:83          us:83    
+##  NA's:83                                              
+##                                                       
+##                                                       
+##                                                       
+##                                                       
+##                                                       
+##    date_time                        date                  hr       
+##  Min.   :2013-10-15 08:12:32   Min.   :2013-10-15   Min.   : 0.00  
+##  1st Qu.:2013-10-15 09:36:11   1st Qu.:2013-10-15   1st Qu.: 8.00  
+##  Median :2013-10-15 16:42:49   Median :2013-10-15   Median :10.00  
+##  Mean   :2013-10-15 21:12:50   Mean   :2013-10-15   Mean   :11.75  
+##  3rd Qu.:2013-10-16 04:39:53   3rd Qu.:2013-10-16   3rd Qu.:16.00  
+##  Max.   :2013-10-17 07:37:28   Max.   :2013-10-17   Max.   :23.00  
+##                                                                    
+##       mins            secs      
+##  Min.   : 0.00   Min.   : 0.13  
+##  1st Qu.:18.00   1st Qu.:20.96  
+##  Median :32.00   Median :28.34  
+##  Mean   :29.66   Mean   :31.84  
+##  3rd Qu.:40.50   3rd Qu.:45.98  
+##  Max.   :59.00   Max.   :59.53  
+## 
+</code></pre></div></div>
+
+<h1 id="largest-magnitude-earthquake">Largest magnitude earthquake</h1>
+
+<p>We will create a separate data frame for the earthquake with the largest magnitude during that time period.</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">max_mag</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">Oct_2015_Quake</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w"> </span><span class="n">filter</span><span class="p">(</span><span class="n">mag</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nf">max</span><span class="p">(</span><span class="n">mag</span><span class="p">))</span><span class="w">
+</span><span class="n">max_mag</span><span class="w">
+</span></code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>##                       time latitude longitude depth mag magType nst gap
+## 1 2013-10-15T00:12:32.050Z   9.8796  124.1167 19.04 7.1     mww  NA  12
+##    dmin rms net         id                  updated
+## 1 3.144 1.3  us usb000kdb4 2017-11-14T15:39:03.247Z
+##                             place       type horizontalError depthError
+## 1 4km SE of Sagbayan, Philippines earthquake              NA        2.9
+##   magError magNst   status locationSource magSource           date_time
+## 1       NA     NA reviewed             us        us 2013-10-15 08:12:32
+##         date hr mins  secs
+## 1 2013-10-15  8   12 32.05
+</code></pre></div></div>
+
+<h1 id="recreating-the-plot-in-ggplot">Recreating the plot in ggplot</h1>
+
+<p>The <a href="https://erikafille.ph/2017/01/18/earthquake-maps-in-r/">plot</a> that I’m trying to produce was done using base R. I will try to recreate it using ggplot. To see how the original plot was done in base R just click on the link above.</p>
+
+<p>The administrative maps in the .rds format comes from the <a href="http://gadm.org/about">Global Administrative Website</a>. We read them in R using the function <code class="highlighter-rouge">readRDS</code> in the base package and then subset the shapefiles for the particular town of Sagbayan, the epicenter of the7.1 M earthquake and the town of Loon which suffered the greatest casualties. Only the town of Sagbayan is shown in the plot below.</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">phil_map</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">readRDS</span><span class="p">(</span><span class="s2">"PHL_adm2.rds"</span><span class="p">)</span><span class="w">
+
+</span><span class="n">bohol_map</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">phil_map</span><span class="p">[</span><span class="n">phil_map</span><span class="o">$</span><span class="n">NAME_1</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">"Bohol"</span><span class="p">,</span><span class="w"> </span><span class="p">]</span><span class="w">
+</span><span class="n">bohol_mapdf</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">fortify</span><span class="p">(</span><span class="n">bohol_map</span><span class="p">,</span><span class="w"> </span><span class="n">region</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"NAME_2"</span><span class="p">)</span><span class="w">
+
+</span><span class="n">sagbayan_map</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">phil_map</span><span class="p">[</span><span class="n">phil_map</span><span class="o">$</span><span class="n">NAME_2</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">"Sagbayan"</span><span class="p">,</span><span class="w"> </span><span class="p">]</span><span class="w">     </span><span class="c1">### filter map only for sagbayan</span><span class="w">
+</span><span class="n">sagbayan_mapdf</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">fortify</span><span class="p">(</span><span class="n">sagbayan_map</span><span class="p">)</span><span class="w">                       </span><span class="c1">### use fortify function so you can use map in ggplot</span><span class="w">
+
+</span><span class="n">loon_map</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">phil_map</span><span class="p">[</span><span class="n">phil_map</span><span class="o">$</span><span class="n">NAME_2</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">"Loon"</span><span class="p">,</span><span class="w"> </span><span class="p">]</span><span class="w">
+</span><span class="n">loon_mapdf</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">fortify</span><span class="p">(</span><span class="n">loon_map</span><span class="p">)</span><span class="w"> 
+
+</span><span class="n">Oct_2015_Quake</span><span class="o">$</span><span class="n">date</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">as.factor</span><span class="p">(</span><span class="n">Oct_2015_Quake</span><span class="o">$</span><span class="n">date</span><span class="p">)</span><span class="w">
+
+</span><span class="n">bohol_mapdf</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+    </span><span class="n">ggplot</span><span class="p">(</span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">long</span><span class="p">,</span><span class="w">
+               </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lat</span><span class="p">,</span><span class="w">
+               </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">group</span><span class="p">))</span><span class="w"> </span><span class="o">+</span><span class="w">
+    </span><span class="n">geom_polygon</span><span class="p">(</span><span class="n">fill</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"black"</span><span class="p">,</span><span class="w">
+                 </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"gray50"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+    </span><span class="n">geom_polygon</span><span class="p">(</span><span class="n">fill</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"yellow"</span><span class="p">,</span><span class="w">
+                 </span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sagbayan_mapdf</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> 
+    </span><span class="n">coord_map</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w">
+    </span><span class="n">geom_point</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Oct_2015_Quake</span><span class="p">,</span><span class="w">
+               </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">longitude</span><span class="p">,</span><span class="w">
+                   </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">latitude</span><span class="p">,</span><span class="w">
+                   </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">date</span><span class="p">,</span><span class="w">
+                   </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Null"</span><span class="p">),</span><span class="w">
+               </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">3</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+    </span><span class="n">geom_point</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Oct_2015_Quake</span><span class="p">,</span><span class="w">
+               </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">longitude</span><span class="p">,</span><span class="w">
+                   </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">latitude</span><span class="p">,</span><span class="w">
+                   </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">date</span><span class="p">,</span><span class="w">
+                   </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Null"</span><span class="p">),</span><span class="w">
+               </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">5</span><span class="p">,</span><span class="w">
+               </span><span class="n">stroke</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1.2</span><span class="p">,</span><span class="w">
+               </span><span class="n">shape</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">theme</span><span class="p">(</span><span class="n">panel.background</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_rect</span><span class="p">(</span><span class="n">fill</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'gray80'</span><span class="p">),</span><span class="w">
+              </span><span class="n">panel.grid.major</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_blank</span><span class="p">(),</span><span class="w">
+              </span><span class="n">panel.grid.minor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_blank</span><span class="p">())</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">xlim</span><span class="p">(</span><span class="nf">c</span><span class="p">(</span><span class="m">123.68114</span><span class="p">,</span><span class="m">124.64547</span><span class="p">))</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">ylim</span><span class="p">(</span><span class="nf">c</span><span class="p">(</span><span class="m">9.48583</span><span class="p">,</span><span class="w"> </span><span class="m">10.25</span><span class="p">))</span><span class="w"> </span><span class="o">+</span><span class="w">
+    </span><span class="n">geom_point</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">max_mag</span><span class="p">,</span><span class="w">
+               </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">longitude</span><span class="p">,</span><span class="w">
+                   </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">latitude</span><span class="p">,</span><span class="w">
+                   </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Null"</span><span class="p">),</span><span class="w">
+               </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">5</span><span class="p">,</span><span class="w">
+               </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"red"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+    </span><span class="n">geom_point</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">max_mag</span><span class="p">,</span><span class="w">
+               </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">longitude</span><span class="p">,</span><span class="w">
+                   </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">latitude</span><span class="p">,</span><span class="w">
+                   </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Null"</span><span class="p">),</span><span class="w">
+               </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">7</span><span class="p">,</span><span class="w">
+               </span><span class="n">stroke</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1.2</span><span class="p">,</span><span class="w">
+               </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"red"</span><span class="p">,</span><span class="w">
+               </span><span class="n">shape</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+    </span><span class="n">geom_point</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">max_mag</span><span class="p">,</span><span class="w">
+               </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">longitude</span><span class="p">,</span><span class="w">
+                   </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">latitude</span><span class="p">,</span><span class="w">
+                   </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Null"</span><span class="p">),</span><span class="w">
+               </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">11</span><span class="p">,</span><span class="w">
+               </span><span class="n">stroke</span><span class="w"> </span><span class="o">=</span><span class="m">1.5</span><span class="p">,</span><span class="w">
+               </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"red"</span><span class="p">,</span><span class="w">
+               </span><span class="n">shape</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">theme</span><span class="p">(</span><span class="n">legend.justification</span><span class="o">=</span><span class="nf">c</span><span class="p">(</span><span class="m">0.05</span><span class="p">,</span><span class="w"> </span><span class="m">0.95</span><span class="p">),</span><span class="w">
+              </span><span class="n">legend.position</span><span class="o">=</span><span class="nf">c</span><span class="p">(</span><span class="m">0.05</span><span class="p">,</span><span class="w"> </span><span class="m">0.95</span><span class="p">),</span><span class="w">
+              </span><span class="n">legend.key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_rect</span><span class="p">(</span><span class="s2">"gray80"</span><span class="p">))</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">scale_color_manual</span><span class="p">(</span><span class="n">values</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="s2">"#FA8072"</span><span class="p">,</span><span class="w">
+                                      </span><span class="s2">"#00B2EE"</span><span class="p">,</span><span class="w">
+                                      </span><span class="s2">"#8FBC8F"</span><span class="p">))</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">guides</span><span class="p">(</span><span class="n">col</span><span class="o">=</span><span class="n">guide_legend</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">"Date"</span><span class="p">))</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="index_files/figure-html/unnamed-chunk-7-1.png" alt="" /><!-- --></p>
+
+<p>Mapping the color of the  points to date puts emphasis on the number of aftershocks that occurred per day.</p>
+
+<h2 id="aftershocks">Aftershocks</h2>
+
+<p>I think a better way to show how many afershocks were felt each day is to use the function <code class="highlighter-rouge">facet_wrap</code>.</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">bohol_mapdf</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+    </span><span class="n">ggplot</span><span class="p">(</span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">long</span><span class="p">,</span><span class="w">
+               </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lat</span><span class="p">,</span><span class="w">
+               </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">group</span><span class="p">))</span><span class="w"> </span><span class="o">+</span><span class="w">
+    </span><span class="n">geom_polygon</span><span class="p">(</span><span class="n">fill</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"black"</span><span class="p">,</span><span class="w">
+                 </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"gray50"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+    </span><span class="n">geom_polygon</span><span class="p">(</span><span class="n">fill</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"yellow"</span><span class="p">,</span><span class="w">
+                 </span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sagbayan_mapdf</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> 
+    </span><span class="n">coord_map</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w">
+    </span><span class="n">geom_point</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Oct_2015_Quake</span><span class="p">,</span><span class="w">
+               </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">longitude</span><span class="p">,</span><span class="w">
+                   </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">latitude</span><span class="p">,</span><span class="w">
+                   </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">date</span><span class="p">,</span><span class="w">
+                   </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Null"</span><span class="p">),</span><span class="w">
+               </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">2</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+    </span><span class="n">geom_point</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Oct_2015_Quake</span><span class="p">,</span><span class="w">
+               </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">longitude</span><span class="p">,</span><span class="w">
+                   </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">latitude</span><span class="p">,</span><span class="w">
+                   </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">date</span><span class="p">,</span><span class="w">
+                   </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Null"</span><span class="p">),</span><span class="w">
+               </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">4</span><span class="p">,</span><span class="w">
+               </span><span class="n">stroke</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1.2</span><span class="p">,</span><span class="w">
+               </span><span class="n">shape</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">theme</span><span class="p">(</span><span class="n">panel.background</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_rect</span><span class="p">(</span><span class="n">fill</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'gray80'</span><span class="p">),</span><span class="w">
+              </span><span class="n">panel.grid.major</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_blank</span><span class="p">(),</span><span class="w">
+              </span><span class="n">panel.grid.minor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_blank</span><span class="p">(),</span><span class="w">
+              </span><span class="n">legend.position</span><span class="o">=</span><span class="s2">"bottom"</span><span class="p">,</span><span class="w">
+              </span><span class="n">legend.box</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"horizontal"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">xlim</span><span class="p">(</span><span class="nf">c</span><span class="p">(</span><span class="m">123.68114</span><span class="p">,</span><span class="m">124.64547</span><span class="p">))</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">ylim</span><span class="p">(</span><span class="nf">c</span><span class="p">(</span><span class="m">9.48583</span><span class="p">,</span><span class="w"> </span><span class="m">10.25</span><span class="p">))</span><span class="w"> </span><span class="o">+</span><span class="w">
+    </span><span class="n">geom_point</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">max_mag</span><span class="p">,</span><span class="w">
+               </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">longitude</span><span class="p">,</span><span class="w">
+                   </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">latitude</span><span class="p">,</span><span class="w">
+                   </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Null"</span><span class="p">),</span><span class="w">
+               </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">3</span><span class="p">,</span><span class="w">
+               </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"red"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+    </span><span class="n">geom_point</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">max_mag</span><span class="p">,</span><span class="w">
+               </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">longitude</span><span class="p">,</span><span class="w">
+                   </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">latitude</span><span class="p">,</span><span class="w">
+                   </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Null"</span><span class="p">),</span><span class="w">
+               </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">5</span><span class="p">,</span><span class="w">
+               </span><span class="n">stroke</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1.5</span><span class="p">,</span><span class="w">
+               </span><span class="n">shape</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">1</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">scale_color_manual</span><span class="p">(</span><span class="n">values</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="s2">"#FA8072"</span><span class="p">,</span><span class="w">
+                                      </span><span class="s2">"#00B2EE"</span><span class="p">,</span><span class="w">
+                                      </span><span class="s2">"#8FBC8F"</span><span class="p">))</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">facet_wrap</span><span class="p">(</span><span class="o">~</span><span class="n">date</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="index_files/figure-html/unnamed-chunk-8-1.png" width="150%" /></p>
+
+<h1 id="finding-bohol">Finding Bohol</h1>
+
+<p>Everyone nowadays are familiar with the nice google maps available in the web. Let’s download a map from google using the <code class="highlighter-rouge">ggmap</code> package and plot our data on that map</p>
+
+<p>We will use the <code class="highlighter-rouge">geocode</code> function from the package <code class="highlighter-rouge">ggmap</code> to obtain the appropriate latitude/longitude center of Bohol from <code class="highlighter-rouge">Google</code>. Thanks to the people behind Google for offering these services for free.</p>
+
+<p>At this moment a new project is brewing in my head with regard to a dataset that we used for predicting the prices of homes in Ames, Iowa. One of the projects that I reviewed from my peers in the class contained a map of the houses, which I thought was pretty cool.  I’d like to try that next.</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">bohol</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">geocode</span><span class="p">(</span><span class="s2">"Sagbayan, Bohol"</span><span class="p">)</span><span class="w">
+</span><span class="n">bohol</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Please take note that Google Maps API places a limit of 2500 queries  per day. We can use the function <code class="highlighter-rouge">geocodeQueryCheck</code> function to determine how many queries remain.</p>
+
+<h1 id="basemap">Basemap</h1>
+
+<p>For our exploration, let’s use a terrain map from Google</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">bohol_terrain</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">get_map</span><span class="p">(</span><span class="nf">c</span><span class="p">(</span><span class="n">lon</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">124.0975</span><span class="p">,</span><span class="w">
+                           </span><span class="n">lat</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">9.899196</span><span class="p">),</span><span class="w">
+                         </span><span class="n">zoom</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">10</span><span class="p">,</span><span class="w">
+                         </span><span class="n">maptype</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"terrain"</span><span class="p">)</span><span class="w">
+
+</span><span class="n">bohol_terrain_map</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">ggmap</span><span class="p">(</span><span class="n">bohol_terrain</span><span class="p">,</span><span class="w"> </span><span class="n">extent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'device'</span><span class="p">)</span><span class="w">
+</span><span class="n">bohol_terrain_map</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="index_files/figure-html/unnamed-chunk-10-1.png" alt="" /><!-- --></p>
+
+<p>This will be the basemap we will be using for this exploration. There are other maps available from googgle, stamen, osm and cloudmade. You can explore them by specifying the map you want using the arguments <code class="highlighter-rouge">source</code> and <code class="highlighter-rouge">maptype</code> in the <code class="highlighter-rouge">get-map</code> function.</p>
+
+<p>We will now add some points. We will be using size and transparency to map the variable mag, which stands for the Magnitude of the earthquake. you will recognize the earthquake with the largest magnitude by the intensity of the color and its size.</p>
+
+<h2 id="plotting-the-data-over-the-map">Plotting the data over the map</h2>
+
+<p>For the next series of  plots The emphasis will be on the magnitude of the earthquake and not the date.</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">bohol_terrain_map</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">geom_point</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Oct_2015_Quake</span><span class="p">,</span><span class="w">
+                   </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">longitude</span><span class="p">,</span><span class="w">
+                       </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">latitude</span><span class="p">,</span><span class="w">
+                       </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mag</span><span class="p">,</span><span class="w">
+                       </span><span class="n">alpha</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mag</span><span class="p">),</span><span class="w">
+                   </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"firebrick1"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">scale_size_continuous</span><span class="p">(</span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"Magnitude"</span><span class="p">,</span><span class="w"> </span><span class="n">range</span><span class="o">=</span><span class="nf">range</span><span class="p">(</span><span class="n">Oct_2015_Quake</span><span class="o">$</span><span class="n">mag</span><span class="p">))</span><span class="w">
+</span></code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>## Warning: Removed 10 rows containing missing values (geom_point).
+</code></pre></div></div>
+
+<p><img src="index_files/figure-html/unnamed-chunk-11-1.png" alt="" /><!-- --></p>
+
+<p>The warning that we got, tells us that there were several points that was not plotted on the map as it was outside of the range of the map. As you can see, the map from google is more zoomed-in than the earlier map we created using ggplot. Hence, some of the data points were not plotted. We’ll set the options in our code chunks to ignore the warnings</p>
+
+<p>It looks good but the sizes of the points fail to convey the differences between the magnitude of the different aftershocks. Instead of using the function <code class="highlighter-rouge">scale_size_continuous</code> to scale the sizes of our points, we will try to use the <code class="highlighter-rouge">scale_radius</code> function.</p>
+
+<h2 id="using-the-function-scale_radius">Using the function <code class="highlighter-rouge">scale_radius</code></h2>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">bohol_terrain_map</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">geom_point</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Oct_2015_Quake</span><span class="p">,</span><span class="w">
+                   </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">longitude</span><span class="p">,</span><span class="w">
+                       </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">latitude</span><span class="p">,</span><span class="w">
+                       </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mag</span><span class="p">,</span><span class="w">
+                       </span><span class="n">alpha</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mag</span><span class="p">),</span><span class="w">
+                   </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"firebrick1"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">scale_radius</span><span class="p">()</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="index_files/figure-html/unnamed-chunk-12-1.png" alt="" /><!-- --></p>
+
+<p>I think the lower values of magnitude got depicted too small. Let’s give it a try without specifying <code class="highlighter-rouge">scale_radius</code> or <code class="highlighter-rouge">scale_size_continuous</code></p>
+
+<h2 id="default-settings">Default settings</h2>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">bohol_terrain_map</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">geom_point</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Oct_2015_Quake</span><span class="p">,</span><span class="w">
+                   </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">longitude</span><span class="p">,</span><span class="w">
+                       </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">latitude</span><span class="p">,</span><span class="w">
+                       </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mag</span><span class="p">,</span><span class="w">
+                       </span><span class="n">alpha</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mag</span><span class="p">),</span><span class="w">
+                   </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"firebrick1"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">labs</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">"7.1M Bohol Earthquake"</span><span class="p">,</span><span class="w">
+             </span><span class="n">subtitle</span><span class="o">=</span><span class="s2">"October 15, 2013"</span><span class="p">,</span><span class="w">
+             </span><span class="n">caption</span><span class="o">=</span><span class="s2">"Data from US Geological Survey"</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="index_files/figure-html/unnamed-chunk-13-1.png" alt="" /><!-- --></p>
+
+<p>This looks a lot better for my taste. BTW, if you noticed the code above, you’d see that I tried to incorporate a title, subtitle and caption but it did not appear on the plot.</p>
+
+<h1 id="specifying-extent">Specifying extent</h1>
+
+<p>By specifying the argument extent to <code class="highlighter-rouge">panel</code> or <code class="highlighter-rouge">normal</code> in the function <code class="highlighter-rouge">ggmap</code> we can make the title, subtitle, and caption appear.</p>
+
+<h2 id="extent--normal">extent = ‘normal’</h2>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">bohol_terrain</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+        </span><span class="n">ggmap</span><span class="p">(</span><span class="n">extent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'normal'</span><span class="p">)</span><span class="w">  </span><span class="o">+</span><span class="w">
+ </span><span class="n">geom_point</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Oct_2015_Quake</span><span class="p">,</span><span class="w">
+            </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">longitude</span><span class="p">,</span><span class="w">
+                </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">latitude</span><span class="p">,</span><span class="w">
+                </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mag</span><span class="p">,</span><span class="w">
+                </span><span class="n">alpha</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mag</span><span class="p">),</span><span class="w">
+            </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"firebrick1"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+</span><span class="n">labs</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">"7.1M Bohol Earthquake"</span><span class="p">,</span><span class="w">
+      </span><span class="n">subtitle</span><span class="o">=</span><span class="s2">"October 15, 2013"</span><span class="p">,</span><span class="w">
+      </span><span class="n">caption</span><span class="o">=</span><span class="s2">"Data from US Geological Survey"</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="index_files/figure-html/unnamed-chunk-14-1.png" alt="" /><!-- --></p>
+
+<p>Not only do we see the title, subtitle, and caption but we also see the missing points that the warning was telling us about. The behviour of the legend, the size of the map and points changed as well. Notice how large the datapoints are in proportion to the size of the map. This type of setting has a lot of creative potential for adding explanatory text to both sides of the plot using the <code class="highlighter-rouge">annotation_custom</code> function in <code class="highlighter-rouge">ggplot</code>.</p>
+
+<h2 id="extent--panel">extent = ‘panel’</h2>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">bohol_terrain</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+        </span><span class="n">ggmap</span><span class="p">(</span><span class="n">extent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'panel'</span><span class="p">)</span><span class="w">  </span><span class="o">+</span><span class="w">
+ </span><span class="n">geom_point</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Oct_2015_Quake</span><span class="p">,</span><span class="w">
+            </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">longitude</span><span class="p">,</span><span class="w">
+                </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">latitude</span><span class="p">,</span><span class="w">
+                </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mag</span><span class="p">,</span><span class="w">
+                </span><span class="n">alpha</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mag</span><span class="p">),</span><span class="w">
+            </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"firebrick1"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">scale_radius</span><span class="p">(</span><span class="n">range</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="m">2</span><span class="p">,</span><span class="w"> </span><span class="m">5</span><span class="p">))</span><span class="w"> </span><span class="o">+</span><span class="w">
+ </span><span class="n">labs</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">"7.1M Bohol Earthquake"</span><span class="p">,</span><span class="w">
+      </span><span class="n">subtitle</span><span class="o">=</span><span class="s2">"October 15, 2013"</span><span class="p">,</span><span class="w">
+      </span><span class="n">caption</span><span class="o">=</span><span class="s2">"Data from US Geological Survey"</span><span class="p">)</span><span class="w"> 
+</span></code></pre></div></div>
+
+<p><img src="index_files/figure-html/unnamed-chunk-15-1.png" alt="" /><!-- --></p>
+
+<p>Specifying <code class="highlighter-rouge">extent = panel</code> changes the way the plot is printed again. The size of the datapoints have to be adjusted eveytime the size of the map changes. By specifying the argument <code class="highlighter-rouge">range</code> to the function <code class="highlighter-rouge">scale_radius</code> I was able to change the size of the points to what I think is best and as bonus a single legend represents both the size and transparency.</p>
+
+<p>If you don’t like the axis ticks, labels, and title we can use the function ‘theme` and specify it to its arguments.</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">bohol_terrain</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+        </span><span class="n">ggmap</span><span class="p">(</span><span class="n">extent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'panel'</span><span class="p">)</span><span class="w">  </span><span class="o">+</span><span class="w">
+ </span><span class="n">geom_point</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Oct_2015_Quake</span><span class="p">,</span><span class="w">
+            </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">longitude</span><span class="p">,</span><span class="w">
+                </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">latitude</span><span class="p">,</span><span class="w">
+                </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mag</span><span class="p">,</span><span class="w">
+                </span><span class="n">alpha</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mag</span><span class="p">),</span><span class="w">
+            </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"firebrick1"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">scale_radius</span><span class="p">(</span><span class="n">range</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="m">2</span><span class="p">,</span><span class="w"> </span><span class="m">5</span><span class="p">))</span><span class="w"> </span><span class="o">+</span><span class="w">
+ </span><span class="n">labs</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">"7.1M Bohol Earthquake"</span><span class="p">,</span><span class="w">
+      </span><span class="n">subtitle</span><span class="o">=</span><span class="s2">"October 15, 2013"</span><span class="p">,</span><span class="w">
+      </span><span class="n">caption</span><span class="o">=</span><span class="s2">"Data from US Geological Survey"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">theme</span><span class="p">(</span><span class="n">axis.title</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_blank</span><span class="p">(),</span><span class="w">
+              </span><span class="n">axis.text</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_blank</span><span class="p">(),</span><span class="w">
+              </span><span class="n">axis.ticks</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_blank</span><span class="p">())</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="index_files/figure-html/unnamed-chunk-16-1.png" alt="" /><!-- --></p>
+
+<h1 id="adding-emphasis-to-certain-towns">Adding Emphasis to certain towns</h1>
+
+<p>Let’s now explore using shapefiles to map particular towns. Let’s distinguish the town of Sagbayan where the 7.2 magnitude eathquake centered and the town of Loon where the highest number of casualties occured.</p>
+
+<p>We used the <code class="highlighter-rouge">fortify</code> function to transform the shapefiles to a dataframe and plot the map using <code class="highlighter-rouge">ggplot</code>.</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">cnames</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">read.csv</span><span class="p">(</span><span class="s2">"bohol_labels.csv"</span><span class="p">,</span><span class="w"> </span><span class="n">stringsAsFactors</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">FALSE</span><span class="p">)</span><span class="w">
+</span><span class="n">sagb_loon_labs</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">cnames</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w"> </span><span class="n">filter</span><span class="p">(</span><span class="n">NAME_2</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">"Sagbayan"</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="n">NAME_2</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">"Loon"</span><span class="p">)</span><span class="w">
+</span><span class="n">bohol_terrain</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+        </span><span class="n">ggmap</span><span class="p">(</span><span class="n">extent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'device'</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">geom_polygon</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sagbayan_mapdf</span><span class="p">,</span><span class="w">
+                     </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="n">long</span><span class="p">,</span><span class="w">
+                         </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lat</span><span class="p">,</span><span class="w">
+                         </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">group</span><span class="p">),</span><span class="w">
+                     </span><span class="n">fill</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"darkcyan"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">geom_polygon</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">loon_mapdf</span><span class="p">,</span><span class="w">
+                     </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="n">long</span><span class="p">,</span><span class="w">
+                         </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lat</span><span class="p">,</span><span class="w">
+                         </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">group</span><span class="p">),</span><span class="w">
+                     </span><span class="n">fill</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"turquoise"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">geom_point</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Oct_2015_Quake</span><span class="p">,</span><span class="w">
+                   </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">longitude</span><span class="p">,</span><span class="w">
+                       </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">latitude</span><span class="p">,</span><span class="w">
+                       </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mag</span><span class="p">,</span><span class="w">
+                       </span><span class="n">alpha</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mag</span><span class="p">),</span><span class="w">
+                   </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"firebrick1"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">scale_radius</span><span class="p">(</span><span class="n">range</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="m">3</span><span class="p">,</span><span class="w"> </span><span class="m">5</span><span class="p">))</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">geom_text</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">sagb_loon_labs</span><span class="p">,</span><span class="w">
+            </span><span class="n">aes</span><span class="p">(</span><span class="n">long</span><span class="p">,</span><span class="w">
+                </span><span class="n">lat</span><span class="p">,</span><span class="w">
+                </span><span class="n">label</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">NAME_2</span><span class="p">),</span><span class="w">
+            </span><span class="n">size</span><span class="o">=</span><span class="m">3</span><span class="p">,</span><span class="w">
+            </span><span class="n">fontface</span><span class="o">=</span><span class="s2">"bold"</span><span class="p">)</span><span class="w"> 
+</span></code></pre></div></div>
+
+<p><img src="index_files/figure-html/unnamed-chunk-17-1.png" alt="" /><!-- --></p>
+
+<p>For further emphasis we also added the town names using geom_text. Now let’s try plotting earthquakes using density instead of points. While points are particularly useful to denote particular places in maps, density tends to convey more information about concentraion of points in certain areas or the influence of different values over a particular area.</p>
+
+<h1 id="plotting-contour-maps">Plotting Contour Maps</h1>
+
+<p>Creating a contour map in ggplot is easy but interpretting the results is not very staighforward.</p>
+
+<h2 id="geom_density2d">geom_density2d</h2>
+
+<p>To illustrate how a contour map depicts the values of a variable we will overlay the values of the variable mag as labels. In a histogram, the values are group in bins and counted. The number of values in each bin is reflected in the height of the bars. In a contour map, the area between the lines are the bins. The higher values are located near the center and decreases as it extends toward the periphery.</p>
+
+<p>When data points overlap each other or gather in clusters, you can opt to plot a contour map instead of points.</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">bohol_terrain</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+        </span><span class="n">ggmap</span><span class="p">(</span><span class="n">extent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'device'</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">geom_density2d</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Oct_2015_Quake</span><span class="p">,</span><span class="w">
+                       </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">longitude</span><span class="p">,</span><span class="w">
+                           </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">latitude</span><span class="p">),</span><span class="w">
+                       </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0.9</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">geom_text</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Oct_2015_Quake</span><span class="p">,</span><span class="w">
+              </span><span class="n">aes</span><span class="p">(</span><span class="n">longitude</span><span class="p">,</span><span class="w">
+                  </span><span class="n">latitude</span><span class="p">,</span><span class="w">
+                  </span><span class="n">label</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">as.character</span><span class="p">(</span><span class="n">mag</span><span class="p">)),</span><span class="w">
+              </span><span class="n">size</span><span class="o">=</span><span class="m">3</span><span class="p">,</span><span class="w">
+              </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"red"</span><span class="p">,</span><span class="w">
+              </span><span class="n">fontface</span><span class="o">=</span><span class="s2">"bold"</span><span class="p">)</span><span class="o">+</span><span class="w">
+ </span><span class="n">labs</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">"7.1M Bohol Earthquake"</span><span class="p">,</span><span class="w">
+      </span><span class="n">subtitle</span><span class="o">=</span><span class="s2">"October 15, 2013"</span><span class="p">,</span><span class="w">
+      </span><span class="n">caption</span><span class="o">=</span><span class="s2">"Data from US Geological Survey"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">theme</span><span class="p">(</span><span class="n">axis.title</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_blank</span><span class="p">(),</span><span class="w">
+              </span><span class="n">axis.text</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_blank</span><span class="p">(),</span><span class="w">
+              </span><span class="n">axis.ticks</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_blank</span><span class="p">())</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="index_files/figure-html/unnamed-chunk-18-1.png" alt="" /><!-- --></p>
+
+<p>We can see that the highest values are concenterated in the center or the narrowest contour line. As the contour lines increases in width, the values that it encompass gets smaller.</p>
+
+<p>However, just like when you’re creating a linear regression line, there are observatinos that are from the least square line. You can spot stray values that are equally high in the periphery, particularly the value 5.7 on the left margin.</p>
+
+<h2 id="stat_density2d">stat_density2d</h2>
+
+<p>Let’s look at the <code class="highlighter-rouge">stat_density2d</code> function which creates density plots. To see the how the points, contour lines and denstities are related to each other, lets  plot them together. Thanks to ggplot’s feature that allows us to plot different layers together we can see all three in action in one plot.</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">bohol_terrain</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+        </span><span class="n">ggmap</span><span class="p">(</span><span class="n">extent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'device'</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">geom_density2d</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Oct_2015_Quake</span><span class="p">,</span><span class="w">
+                       </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">longitude</span><span class="p">,</span><span class="w">
+                           </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">latitude</span><span class="p">),</span><span class="w">
+                       </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0.9</span><span class="p">,</span><span class="w">
+                       </span><span class="n">bins</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">8</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">stat_density2d</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Oct_2015_Quake</span><span class="p">,</span><span class="w">
+                       </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">longitude</span><span class="p">,</span><span class="w">
+                           </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">latitude</span><span class="p">,</span><span class="w">
+                           </span><span class="n">fill</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">..level..</span><span class="p">,</span><span class="w">
+                           </span><span class="n">alpha</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">..level..</span><span class="p">),</span><span class="w">
+                       </span><span class="n">geom</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"polygon"</span><span class="p">,</span><span class="w">
+                       </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0.01</span><span class="p">,</span><span class="w">
+                       </span><span class="n">bins</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">8</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">geom_text</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Oct_2015_Quake</span><span class="p">,</span><span class="w">
+              </span><span class="n">aes</span><span class="p">(</span><span class="n">longitude</span><span class="p">,</span><span class="w">
+                  </span><span class="n">latitude</span><span class="p">,</span><span class="w">
+                  </span><span class="n">label</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">as.character</span><span class="p">(</span><span class="n">mag</span><span class="p">)),</span><span class="w">
+              </span><span class="n">size</span><span class="o">=</span><span class="m">3</span><span class="p">,</span><span class="w">
+              </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"red"</span><span class="p">,</span><span class="w">
+              </span><span class="n">fontface</span><span class="o">=</span><span class="s2">"bold"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">labs</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">"7.1M Bohol Earthquake"</span><span class="p">,</span><span class="w">
+             </span><span class="n">subtitle</span><span class="o">=</span><span class="s2">"October 15, 2013"</span><span class="p">,</span><span class="w">
+             </span><span class="n">caption</span><span class="o">=</span><span class="s2">"Data from US Geological Survey"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">theme</span><span class="p">(</span><span class="n">axis.title</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_blank</span><span class="p">(),</span><span class="w">
+              </span><span class="n">axis.text</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_blank</span><span class="p">(),</span><span class="w">
+              </span><span class="n">axis.ticks</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_blank</span><span class="p">())</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="index_files/figure-html/unnamed-chunk-19-1.png" alt="" /><!-- --></p>
+
+<p>The density plot is  more dramatic compared to points or contour lines. We can control the number of denstity groups just like when  we control the number of bins in a histogram.</p>
+
+<h1 id="changing-color-of-the-density">Changing color of the density</h1>
+
+<p>We can experiment with changing the color of the density in our plot using the <code class="highlighter-rouge">scale_fill_gradient</code> function.</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">bohol_terrain_map</span><span class="w"> </span><span class="o">+</span><span class="w"> 
+        </span><span class="n">stat_density2d</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Oct_2015_Quake</span><span class="p">,</span><span class="w">
+                       </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">longitude</span><span class="p">,</span><span class="w">
+                           </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">latitude</span><span class="p">,</span><span class="w">
+                           </span><span class="n">fill</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">..level..</span><span class="p">,</span><span class="w">
+                           </span><span class="n">alpha</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">..level..</span><span class="p">),</span><span class="w">
+                       </span><span class="n">geom</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"polygon"</span><span class="p">,</span><span class="w">
+                       </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0.01</span><span class="p">,</span><span class="w">
+                       </span><span class="n">bins</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">8</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">scale_fill_gradient</span><span class="p">(</span><span class="n">low</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"yellow"</span><span class="p">,</span><span class="w">
+                            </span><span class="n">high</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"red"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">scale_alpha</span><span class="p">(</span><span class="n">range</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="m">0.2</span><span class="p">,</span><span class="w"> </span><span class="m">0.7</span><span class="p">))</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="index_files/figure-html/unnamed-chunk-21-1.png" alt="" /><!-- --></p>
+
+<h1 id="combining-google-map-and-shapefile">Combining Google map and shapefile</h1>
+
+<p>let’s try to put emphasis on the whole island of Bohol by plotting a shapefile over it. We’ll add in the administrative boundaries to seperate one town from another. This could prove to be useful for visualizing which <strong>administrative areas</strong> are most and least affected by the earthquakes.</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">bohol_terrain_map</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">theme</span><span class="p">(</span><span class="n">legend.position</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'none'</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">geom_polygon</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bohol_mapdf</span><span class="p">,</span><span class="w">
+                     </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="n">long</span><span class="p">,</span><span class="w">
+                         </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lat</span><span class="p">,</span><span class="w">
+                         </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">group</span><span class="p">),</span><span class="w">
+                     </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"darkcyan"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">stat_density2d</span><span class="p">(</span><span class="n">aes</span><span class="p">(</span><span class="n">fill</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">..level..</span><span class="p">,</span><span class="w">
+                           </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">longitude</span><span class="p">,</span><span class="w">
+                           </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">latitude</span><span class="p">),</span><span class="w">
+                       </span><span class="n">alpha</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">.4</span><span class="p">,</span><span class="w">
+                       </span><span class="n">bins</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">8</span><span class="p">,</span><span class="w">
+                       </span><span class="n">geom</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"polygon"</span><span class="p">,</span><span class="w">
+                       </span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Oct_2015_Quake</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">scale_fill_viridis</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">geom_polygon</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">loon_mapdf</span><span class="p">,</span><span class="w">
+                     </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">long</span><span class="p">,</span><span class="w">
+                         </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lat</span><span class="p">,</span><span class="w">
+                         </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">group</span><span class="p">),</span><span class="w">
+                     </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"green"</span><span class="p">,</span><span class="w">
+                     </span><span class="n">fill</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"red"</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="index_files/figure-html/unnamed-chunk-22-1.png" alt="" /><!-- --></p>
+
+<p>The plot looks good except for the clipping that happened at the right margin. Could the error have come from our shapefiles???</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ggplot</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bohol_mapdf</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">geom_polygon</span><span class="p">(</span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">long</span><span class="p">,</span><span class="w">
+                         </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lat</span><span class="p">,</span><span class="w">
+                         </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">group</span><span class="p">),</span><span class="w">
+                     </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"black"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">stat_density2d</span><span class="p">(</span><span class="n">aes</span><span class="p">(</span><span class="n">fill</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">..level..</span><span class="p">,</span><span class="w">
+                           </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">longitude</span><span class="p">,</span><span class="w">
+                           </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">latitude</span><span class="p">),</span><span class="w">
+                       </span><span class="n">alpha</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">.2</span><span class="p">,</span><span class="w">
+                       </span><span class="n">geom</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"polygon"</span><span class="p">,</span><span class="w">
+                       </span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Oct_2015_Quake</span><span class="p">,</span><span class="w">
+                       </span><span class="n">size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0.01</span><span class="p">,</span><span class="w">
+                       </span><span class="n">bins</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">8</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">scale_fill_viridis</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">geom_polygon</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">loon_mapdf</span><span class="p">,</span><span class="w">
+                     </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">long</span><span class="p">,</span><span class="w">
+                         </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lat</span><span class="p">,</span><span class="w">
+                         </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">group</span><span class="p">),</span><span class="w">
+                     </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"green"</span><span class="p">,</span><span class="w">
+                     </span><span class="n">fill</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"red"</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="index_files/figure-html/unnamed-chunk-23-1.png" alt="" /><!-- --></p>
+
+<p>No, The shapefiles show a complete map on this plot. The clipping is probably happening because  the right margin approximates the edge of the google map.</p>
+
+<p>We’ll need to specify a new longitude/latitude location to extend the right margin of the map. We will create a numrical vector that will contain the left, bottom, right, and top limits of the map we want and google will try to stitch the image we need using the maps it has available.</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">bbox</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="m">123.6518</span><span class="p">,</span><span class="w"> </span><span class="m">9.465327</span><span class="p">,</span><span class="w"> </span><span class="m">124.7567</span><span class="p">,</span><span class="w"> </span><span class="m">10.33142</span><span class="p">)</span><span class="w">
+</span><span class="n">custom_latlong</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">get_map</span><span class="p">(</span><span class="n">location</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bbox</span><span class="p">,</span><span class="w">
+        </span><span class="n">source</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"google"</span><span class="p">,</span><span class="w">
+        </span><span class="n">zoom</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">10</span><span class="p">,</span><span class="w">
+        </span><span class="n">maptype</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"terrain"</span><span class="p">)</span><span class="w"> 
+        
+</span><span class="n">custom_latlong</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w">
+        </span><span class="n">ggmap</span><span class="p">(</span><span class="n">extent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"device"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">geom_polygon</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bohol_mapdf</span><span class="p">,</span><span class="w">
+                     </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="n">long</span><span class="p">,</span><span class="w">
+                         </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lat</span><span class="p">,</span><span class="w">
+                         </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">group</span><span class="p">),</span><span class="w">
+                     </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"darkcyan"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">stat_density2d</span><span class="p">(</span><span class="n">aes</span><span class="p">(</span><span class="n">fill</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">..level..</span><span class="p">,</span><span class="w">
+                           </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">longitude</span><span class="p">,</span><span class="w">
+                           </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">latitude</span><span class="p">),</span><span class="w">
+                       </span><span class="n">alpha</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">.4</span><span class="p">,</span><span class="w"> </span><span class="n">bins</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">8</span><span class="p">,</span><span class="w">
+                       </span><span class="n">geom</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"polygon"</span><span class="p">,</span><span class="w">
+                       </span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Oct_2015_Quake</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">scale_fill_viridis</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">geom_polygon</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">loon_mapdf</span><span class="p">,</span><span class="w">
+                     </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">long</span><span class="p">,</span><span class="w">
+                         </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lat</span><span class="p">,</span><span class="w">
+                         </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">group</span><span class="p">),</span><span class="w">
+                     </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"green"</span><span class="p">,</span><span class="w">
+                     </span><span class="n">fill</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"red"</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="index_files/figure-html/unnamed-chunk-24-1.png" alt="" /><!-- --></p>
+
+<p>That seem to work but it created a lot of empty spaces on the lower part of the plot and it removed other landmass that act as reference points in terms of size of the island of Bohol. The island of Cebu on the upper left area acts as a landmark. More people are familiar with the island of Cebu compared to Bohol, so i’d like to keep it there. We can try decreasing our argument to zoom from 10 to 9.</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">zoom9</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">get_map</span><span class="p">(</span><span class="nf">c</span><span class="p">(</span><span class="n">lon</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">124.0975</span><span class="p">,</span><span class="w">
+                   </span><span class="n">lat</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">9.899196</span><span class="p">),</span><span class="w">
+                 </span><span class="n">zoom</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">9</span><span class="p">,</span><span class="w">
+                 </span><span class="n">maptype</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"terrain"</span><span class="p">)</span><span class="w">
+
+</span><span class="n">zoom9</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w"> </span><span class="n">ggmap</span><span class="p">(</span><span class="n">extent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"device"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">geom_polygon</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bohol_mapdf</span><span class="p">,</span><span class="w">
+                     </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="n">long</span><span class="p">,</span><span class="w">
+                         </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lat</span><span class="p">,</span><span class="w">
+                         </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">group</span><span class="p">),</span><span class="w">
+                     </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"darkcyan"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">stat_density2d</span><span class="p">(</span><span class="n">aes</span><span class="p">(</span><span class="n">fill</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">..level..</span><span class="p">,</span><span class="w">
+                           </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">longitude</span><span class="p">,</span><span class="w">
+                           </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">latitude</span><span class="p">),</span><span class="w">
+                       </span><span class="n">alpha</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">.4</span><span class="p">,</span><span class="w"> </span><span class="n">bins</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">8</span><span class="p">,</span><span class="w">
+                       </span><span class="n">geom</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"polygon"</span><span class="p">,</span><span class="w">
+                       </span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Oct_2015_Quake</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">scale_fill_viridis</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">geom_polygon</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">loon_mapdf</span><span class="p">,</span><span class="w">
+                     </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">long</span><span class="p">,</span><span class="w">
+                         </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lat</span><span class="p">,</span><span class="w">
+                         </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">group</span><span class="p">),</span><span class="w">
+                     </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"green"</span><span class="p">,</span><span class="w">
+                     </span><span class="n">fill</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"red"</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="index_files/figure-html/unnamed-chunk-25-1.png" alt="" /><!-- --></p>
+
+<p>That made the plot very small. No problem, we can adjust the boundaries of the map to show only the areas we want.</p>
+
+<p>#Final plot</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">zoom9</span><span class="w"> </span><span class="o">%&gt;%</span><span class="w"> </span><span class="n">ggmap</span><span class="p">(</span><span class="n">extent</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"panel"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">geom_polygon</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bohol_mapdf</span><span class="p">,</span><span class="w">
+                     </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="n">long</span><span class="p">,</span><span class="w">
+                         </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lat</span><span class="p">,</span><span class="w">
+                         </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">group</span><span class="p">),</span><span class="w">
+                     </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"darkcyan"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">stat_density2d</span><span class="p">(</span><span class="n">aes</span><span class="p">(</span><span class="n">fill</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">..level..</span><span class="p">,</span><span class="w">
+                           </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">longitude</span><span class="p">,</span><span class="w">
+                           </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">latitude</span><span class="p">),</span><span class="w">
+                       </span><span class="n">alpha</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">.4</span><span class="p">,</span><span class="w"> </span><span class="n">bins</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">8</span><span class="p">,</span><span class="w">
+                       </span><span class="n">geom</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"polygon"</span><span class="p">,</span><span class="w">
+                       </span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Oct_2015_Quake</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">scale_fill_viridis</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">geom_polygon</span><span class="p">(</span><span class="n">data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">loon_mapdf</span><span class="p">,</span><span class="w">
+                     </span><span class="n">aes</span><span class="p">(</span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">long</span><span class="p">,</span><span class="w">
+                         </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lat</span><span class="p">,</span><span class="w">
+                         </span><span class="n">group</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">group</span><span class="p">),</span><span class="w">
+                     </span><span class="n">color</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"green"</span><span class="p">,</span><span class="w">
+                     </span><span class="n">fill</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"red"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+        </span><span class="n">coord_map</span><span class="p">(</span><span class="n">xlim</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="m">123.3</span><span class="p">,</span><span class="w">
+                           </span><span class="m">125.01</span><span class="p">),</span><span class="w">
+                  </span><span class="n">ylim</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="m">9.45</span><span class="p">,</span><span class="w">
+                           </span><span class="m">10.35</span><span class="p">))</span><span class="w"> </span><span class="o">+</span><span class="w">
+ </span><span class="n">labs</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">"7.1M Bohol Earthquake"</span><span class="p">,</span><span class="w">
+      </span><span class="n">subtitle</span><span class="o">=</span><span class="s2">"October 15, 2013"</span><span class="p">,</span><span class="w">
+      </span><span class="n">caption</span><span class="o">=</span><span class="s2">"Data from US Geological Survey"</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w">
+ </span><span class="n">theme</span><span class="p">(</span><span class="n">axis.title</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_blank</span><span class="p">(),</span><span class="w">
+              </span><span class="n">axis.text</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_blank</span><span class="p">(),</span><span class="w">
+              </span><span class="n">axis.ticks</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">element_blank</span><span class="p">())</span><span class="w">
+</span></code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>## Coordinate system already present. Adding new coordinate system, which will replace the existing one.
+</code></pre></div></div>
+
+<p><img src="index_files/figure-html/unnamed-chunk-26-1.png" width="150%" /></p>
+
+<p>I think that’s the plot i want.  Thank you for joining me  and I hope you learned something in this exploration.</p>
+
+<p>EJLO
+“I used to extract teeth now i extract bytes”</p>
+
