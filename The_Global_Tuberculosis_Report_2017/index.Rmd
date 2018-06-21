@@ -148,16 +148,16 @@ g2 <- ggplot(allcase_plotdf,                                        ### take all
                                       0,
                                       2500000,
                                       5000000),
-                           labels = c(2500000,
+                           labels = c(2.5,
                                       0,
                                       2.5,
-                                      5000000)) +
+                                      5)) +
         scale_fill_manual(values = c("maroon2", "mediumblue"))     ### set color manually     
 
 grid.arrange(g1, g2, nrow = 1)                                     ### arrange position of plot
 ```
 
-In 2016, about `r round(stat_2016$deaths,0)` people died from TB each day and approximatley `r round(stat_2016$incidence, 0)` new cases of TB were recorded daily worldwide. 
+In 2016, `r round(stat_2016$deaths,0)` people died from TB each day. That's about `r round(stat_2016$deaths/(24*60) ,0)` persons per minute. Approximatley `r round(stat_2016$incidence, 0)` new cases of TB were recorded daily worldwide or `r round(stat_2016$incidence/(24*60), 0)` persons per minute. 
 
 > *An estimated 10.4 million people fell ill with TB in 2016: 90% were* 
 > *adults, 65% were male, 10% were people living with HIV (74% in Africa)*
@@ -227,7 +227,14 @@ The map below shows the countries with higher incidence of TB (per 100,000 popul
 Democratic People's Republic of Korea, Lesotho, Mozambique, the Philippines and South Africa.
 
 ```{r mapplot, message=FALSE, warning=FALSE, fig.width=8}
-top30 <- TB.burden %>%                                                ### Create subset of the
+
+world_map <- map_data("world")                                       ### Create data for world map
+world_map <- world_map[world_map$region != "Antarctica",]            ### remove Antartica 
+
+map_region <- unique(world_map$region)                               ### get names of countries
+TB_country <- unique(TB.burden$country)                              ### get names of countries
+
+TB.burden_recoded <- TB.burden %>%                                       ### create subset of the
         select(country,                                               ### TB.burden data and
                g_whoregion,                                           ### select variables that
                year,                                                  ### we'll need to plot
@@ -242,92 +249,51 @@ top30 <- TB.burden %>%                                                ### Create
                e_inc_num_m,
                e_inc_num_m014,
                e_inc_num_m15plus,
-               e_mort_exc_tbhiv_100k) %>%
-        filter(country %in% c("Angola",                              ###  filter countries
-                              "Bangladesh",                          ### that belong to the
-                              "Brazil",                              ### High Burden Countries
-                              "Cambodia",
-                              "Central African Republic",
-                              "China",
-                              "Congo",
-                              "Democratic People's Republic of Korea",
-                              "Democratic Republic of the Congo",
-                              "Ethiopia",
-                              "India",
-                              "Indonesia",
-                              "Kenya",
-                              "Lesotho",
-                              "Liberia",
-                              "Mozambique",
-                              "Myanmar",
-                              "Namibia",
-                              "Nigeria",
-                              "Pakistan",
-                              "Papua New Guinea",
-                              "Philippines",
-                              "Russian Federation",
-                              "Sierra Leone",
-                              "South Africa",
-                              "Thailand",
-                              "United Republic of Tanzania",
-                              "Viet Nam",
-                              "Zambia",
-                              "Zimbabwe"))
-top30_copy <- top30                                                  ### make a copy of the data
-
-world_map <- map_data("world")                                       ### Create data for world map
-world_map <- world_map[world_map$region != "Antarctica",]            ### remove Antartica 
-
-map_region <- unique(world_map$region)                               ### get names of countries
-TB_country <- unique(TB.burden$country)                              ### get names of countries
-
-TB.burden2016 <- TB.burden %>%                                       ### create subset of the
-        select(country,                                              ### data TB.burden and 
-               g_whoregion,                                          ### selct variables needed
-               year, e_inc_100k) %>%                                 ### for plotting
-        filter(year == 2016)                                         ### use data for 2016 only
-
-TB_country2016 <- unique(TB.burden2016$country)                      ### get names of countries
+               e_mort_num,
+               e_mort_100k,
+               e_mort_exc_tbhiv_100k) 
 
 
 ### reconcile spelling of the names of the countries in the two data frames before merging
-TB.burden2016$country <- recode(TB.burden2016$country,
+TB.burden_recoded$country <- recode(TB.burden_recoded$country,
                                              "Antigua and Barbuda" = "Antigua",
                                              "Bolivia (Plurinational State of)" = "Bolivia",
+                                             "Bonaire, Saint Eustatius and Saba" = "Bonaire",
+                                             "British Virgin Islands" = "VirginIslands",
                                              "Brunei Darussalam" = "Brunei",
                                              "Cabo Verde" = "Cape Verde",
                                              "Côte d'Ivoire" = "Ivory Coast",
                                              "Congo" = "Republic of Congo",
                                              "Czechia" = "Czech Republic",
-                                             "Guyana" = "French Guiana",
-                                             "Micronesia (Federated States of)" = "Micronesia",
-                                             "United Kingdom of Great Britain and Northern Ireland" = "UK",
-                                             "Iran (Islamic Republic of)" = "Iran",
-                                             "Saint Kitts and Nevis" = "Nevis",
                                              "Democratic People's Republic of Korea" = "South Korea",
+                                             "Iran (Islamic Republic of)" = "Iran",
                                              "Lao People's Democratic Republic" = "Laos",
-                                             "Republic of Moldova" = "Moldova",
-                                             "The Former Yugoslav Republic of Macedonia" = "Macedonia",
-                                             "Bonaire, Saint Eustatius and Saba" = "Bonaire",
+                                             "Micronesia (Federated States of)" = "Micronesia",
                                              "Republic of Korea" = "North Korea",
+                                             "Republic of Moldova" = "Moldova",
                                              "Russian Federation" = "Russia",
-                                             "Georgia" = "Georgia",
+                                             "Saint Kitts and Nevis" = "Nevis",
+                                             "Saint Vincent and the Grenadines" = "Saint Vincent",
                                              "Sint Maarten (Dutch part)" = "Sint Maarten",
                                              "Syrian Arab Republic" = "Syria",
+                                             "The Former Yugoslav Republic of Macedonia" = "Macedonia",
                                              "Trinidad and Tobago" = "Trinidad",
-                                             "United Republic of Tanzania" = "Tanzania",
+                                             "United Kingdom of Great Britain and Northern Ireland" = "UK",
                                              "United States of America" = "USA",
-                                             "Saint Vincent and the Grenadines" = "Saint Vincent",
+                                             "United Republic of Tanzania" = "Tanzania",
                                              "Venezuela (Bolivarian Republic of)"= "Venezuela",
-                                             "Viet Nam" = "Vietnam")
-inset_plot <- ggplot(data = TB.burden, aes(x = e_inc_100k)) + geom_histogram(Color = "yellow", fill = "slateblue")+ theme_hc(bgcolor = "darkunica") + labs(title = "Histogram of\nincidence of TB", subtitle = "per 100,000 population", x = "", y = "") +theme(title = element_text(size = 8), axis.text = element_text(color = "white"))
+                                             "Viet Nam" = "Vietnam",
+                                             "Wallis and Futuna Islands" = "Wallis and Futuna")
+
+inset_plot <- TB.burden %>% select(year, e_inc_100k) %>% filter(year == 2016) %>% ggplot(aes(x = e_inc_100k)) + geom_histogram(Color = "yellow", fill = "slateblue")+ theme_hc(bgcolor = "darkunica") + labs(title = "Histogram of\nincidence of TB", subtitle = "per 100,000 population", x = "", y = "") +theme(title = element_text(size = 8), axis.text = element_text(color = "white"))
 
 g <- ggplotGrob(inset_plot)
 
 ###g <- qplot(data = TB.burden, x = e_inc_100k, geom = "histogram", fill = I("slateblue")) 
 
 world_map_joined <- left_join(world_map,                             ### merged world map data
-                              TB.burden2016,                         ### with TB data
+                              TB.burden_recoded %>%
+                                      filter(year == 2016),          ### with TB data
                               by = c('region' = 'country')) 
 
 ggplot(data = world_map_joined) + geom_polygon(aes (x = long,
@@ -360,9 +326,41 @@ ggplot(data = world_map_joined) + geom_polygon(aes (x = long,
 The 30 High TB Burden Countries were higlighted to focus global action on TB in countries where progress is most needed. High TB Burden Countries account for **87.1%** of estimated absolute number of incident cases and **86.5%** estimated absolute number of mortality cases. The 20 countries with the highest estimated **absolute** number of incident TB cases, plus the top 10 countries with the highest estimated TB incidence _per capita_ make up the list.
 
 ```{r fig.width=8, fig.height=3}
-g1 <- TB.burden %>% select(country, year, e_inc_num) %>% filter(year == 2016) %>% mutate(hbc = ifelse(country %in% top30_copy$country, TRUE, FALSE)) %>% group_by(hbc) %>% summarise(sum_inc = sum(e_inc_num)) %>% mutate(perc = paste0(round(sum_inc/sum(sum_inc)*100,1), "%")) %>% ggplot(aes(x = hbc, y=sum_inc, fill = factor(hbc))) + geom_bar(stat = "identity") + geom_text(aes(label = perc), vjust = 1.6, color = "white", size = 3.5) +  theme_hc(bgcolor = "darkunica") + labs(title = "Incidence of TB cases in 2016 among\nHigh Burden Countries and\nthe rest of the world", subtitle = "estimated number of incident cases" , caption = "WHO | Tuberculosis Data", x = "", y = "") + guides(fill = FALSE) + scale_x_discrete(labels = c("rest of the world", "High Burden Countries")) + scale_fill_manual(values = c("mediumblue", "maroon2")) + theme(axis.text.x = element_text(colour = "white"), title = element_text(size = 9))          
+top30 <- c("Angola",                              ###  filter countries
+           "Bangladesh",                          ### that belong to the
+           "Brazil",                              ### High Burden Countries
+           "Cambodia",
+           "Central African Republic",
+           "China",
+           "Republic of Congo",
+           "South Korea",
+           "Democratic Republic of the Congo",
+           "Ethiopia",
+           "India",
+           "Indonesia",
+           "Kenya",
+           "Lesotho",
+           "Liberia",
+           "Mozambique",
+           "Myanmar",
+           "Namibia",
+           "Nigeria",
+           "Pakistan",
+           "Papua New Guinea",
+           "Philippines",
+           "Russia",
+           "Sierra Leone",
+           "South Africa",
+           "Thailand",
+           "Tanzania",
+           "Vietnam",
+           "Zambia",
+           "Zimbabwe")
 
-g2 <- TB.burden %>% select(country, year, e_mort_num) %>% filter(year == 2016) %>% mutate(hbc = ifelse(country %in% top30_copy$country, TRUE, FALSE)) %>% group_by(hbc) %>% summarise(sum_mort = sum(e_mort_num)) %>% mutate(perc = paste0(round(sum_mort/sum(sum_mort)*100,1), "%")) %>% ggplot(aes(x = hbc, y=sum_mort, fill = factor(hbc))) + geom_bar(stat = "identity") + geom_text(aes(label = perc), vjust = 1.6, color = "white", size = 3.5) +  theme_hc(bgcolor = "darkunica") + guides(fill = FALSE) + labs(title = "Mortality of TB cases in 2016 among\nHigh Burden Countries and\nthe rest of the world", subtitle = "estimated number of mortality cases", caption = "WHO | Tuberculosis Data", x = "", y = "") + scale_x_discrete(labels = c("rest of the world", "High Burden Countries")) + scale_fill_manual(values = c("mediumblue", "maroon2")) + theme(axis.text.x = element_text(colour = "white"), title = element_text(size = 9))     
+
+g1 <- TB.burden_recoded %>% select(country, year, e_inc_num) %>% filter(year == 2016) %>% mutate(hbc = ifelse(country %in% top30, TRUE, FALSE)) %>% group_by(hbc) %>% summarise(sum_inc = sum(e_inc_num)) %>% mutate(perc = paste0(round(sum_inc/sum(sum_inc)*100,1), "%")) %>% ggplot(aes(x = hbc, y=sum_inc, fill = factor(hbc))) + geom_bar(stat = "identity") + geom_text(aes(label = perc), vjust = 1.6, color = "white", size = 3.5) +  theme_hc(bgcolor = "darkunica") + labs(title = "Incidence of TB cases in 2016 among\nHigh Burden Countries and\nthe rest of the world", subtitle = "estimated number of incident cases" , caption = "WHO | Tuberculosis Data", x = "", y = "") + guides(fill = FALSE) + scale_x_discrete(labels = c("rest of the world", "High Burden Countries")) + scale_fill_manual(values = c("mediumblue", "maroon2")) + theme(axis.text.x = element_text(colour = "white"), title = element_text(size = 9))        
+
+g2 <- TB.burden_recoded %>% select(country, year, e_mort_num) %>% filter(year == 2016) %>% mutate(hbc = ifelse(country %in% top30, TRUE, FALSE)) %>% group_by(hbc) %>% summarise(sum_mort = sum(e_mort_num)) %>% mutate(perc = paste0(round(sum_mort/sum(sum_mort)*100,1), "%")) %>% ggplot(aes(x = hbc, y=sum_mort, fill = factor(hbc))) + geom_bar(stat = "identity") + geom_text(aes(label = perc), vjust = 1.6, color = "white", size = 3.5) +  theme_hc(bgcolor = "darkunica") + guides(fill = FALSE) + labs(title = "Mortality of TB cases in 2016 among\nHigh Burden Countries and\nthe rest of the world", subtitle = "estimated number of mortality cases", caption = "WHO | Tuberculosis Data", x = "", y = "") + scale_x_discrete(labels = c("rest of the world", "High Burden Countries")) + scale_fill_manual(values = c("mediumblue", "maroon2")) + theme(axis.text.x = element_text(colour = "white"), title = element_text(size = 9))     
 
 grid.arrange(g1, g2, nrow =1)
 ```
@@ -380,8 +378,9 @@ grid.arrange(g1, g2, nrow =1)
 The map below highlight the 30 countries with the highest burden of TB in different shades of pink. Countries not included in the list are in gray. A darker shade indicate countries with higher burden of disease. The `ggplot2` package offers a lot of flexibility to alter different aspects of the plot to suit different situations.
 
 ```{r}
-top30mapdf <- top30 %>%                                       ### take 2016 data from 
-        filter(year == 2016) %>%                              ### high burden countries         
+top30mapdf <- TB.burden_recoded %>%                                       ### take 2016 data from 
+        filter(year == 2016,
+               country %in% top30) %>%                              ### high burden countries         
         select(country,                                       ### select var needed
                e_inc_num) %>%                                 ### arrange incidence
         arrange(desc(e_inc_num))                              ### in descending order
@@ -413,11 +412,8 @@ ggplot() + geom_polygon(data = top30_joined,                  ### plot data
 We can include labels to facilitate identificaton of the countries in the list and their geographic locations.
 
 ```{r}
-top30_latlon <- read.csv("top30_latlon.csv",           ### get de and longitude position
+top30_latlon <- read.csv("top30_latlon2.csv",           ### get de and longitude position
                          stringsAsFactors = FALSE)     ### of high burden countries
-
-top30_latlon$country[16] <- "Vietnam"                  ### edit spelling of Vietnam
-
 ggplot(data = top30_joined) +                          ### plot map
         geom_polygon(aes (x = long,
                           y = lat,
@@ -448,8 +444,9 @@ The plot below shows the ranking among the 30 High Burden countries in terms of 
 > *56% were in five countries: India, Indonesia, China, the Philippines and Pakistan.*
 
 ```{r}
-top30 %>%
-        filter(year == 2016) %>%
+TB.burden_recoded %>%
+        filter(year == 2016,
+               country %in% top30) %>%
         select(country,
                e_inc_num, year) %>%
         arrange(desc(e_inc_num)) %>%
@@ -476,18 +473,17 @@ Notice in the left plot below how the values and ranking changed when incidence 
 
 
 ```{r fig.width=8}
-top30$country <- recode(top30$country,
+TB.burden_recoded$country_abbrev <- recode(TB.burden_recoded$country,
                         "Central African Republic" = "Cen African Rep",
-                        "Democratic People's Republic of Korea" = "DPR Korea",
-                        "Democratic Republic of the Congo" = "DP Congo",
-                        "United Republic of Tanzania" = "UR Tanzania")
+                        "Democratic Republic of the Congo" = "DP Congo")
 
-g1 <- top30 %>%
-        filter(year == 2016) %>%
-        select(country,
+g1 <- TB.burden_recoded %>%
+        filter(year == 2016,
+               country %in% top30) %>%
+        select(country_abbrev,
                e_inc_100k, year) %>%
         arrange(desc(e_inc_100k)) %>%
-        ggplot(aes(x = reorder(country,
+        ggplot(aes(x = reorder(country_abbrev,
                                e_inc_100k),
                    y = e_inc_100k)) +
         geom_point(size = 3,
@@ -506,12 +502,13 @@ g1 <- top30 %>%
               legend.position = "right",
               panel.grid.major.x = element_line(color = "gray50"))
 
-g2 <- top30 %>%
-        filter(year == 2016) %>%
-        select(country,
+g2 <- TB.burden_recoded %>%
+        filter(year == 2016,
+               country %in% top30) %>%
+        select(country_abbrev,
                e_pop_num, year) %>%
         arrange(desc(e_pop_num)) %>%
-        ggplot(aes(x = reorder(country,
+        ggplot(aes(x = reorder(country_abbrev,
                                e_pop_num),
                    y = e_pop_num)) +
         geom_point(size = 3,
@@ -538,7 +535,7 @@ grid.arrange(g1, g2, nrow=1)
 For the plots below we will be using the variable `e_inc_100k` which reports the incidence of TB per 100,000 population. The plots earlier were constructed using the variable `e_inc_num` which shows the absolute number of incident cases per country. In this way, the value that is reported does not only take into account the number of cases per country but also the proportion of the population that is affected. The TB mortality rate (per 100 000 population) fell by 37% between 2000 and 2016.
 
 ```{r fig.height=3}
-inc_2016 <- TB.burden %>%
+inc_2016 <- TB.burden_recoded %>%
         select(country,
                year, e_inc_100k) %>%
         group_by(year) %>%
@@ -560,7 +557,7 @@ inc_2016 <- TB.burden %>%
               panel.grid.major.x = element_line(color = "gray50"),
               title = element_text(size = 8))
 
-mort_2016 <- TB.burden %>%
+mort_2016 <- TB.burden_recoded %>%
         select(country,
                year,
                e_mort_exc_tbhiv_100k) %>%
@@ -596,7 +593,7 @@ grid.arrange(inc_2016, mort_2016, nrow = 1)
 The graph below shows how high the incidence and mortality were in the African Region in 2000 and the significiant improvement that has been achieved from 2000 to 2016.
 
 ```{r fig.height=4, fig.width=8}
-g1 <- TB.burden %>%
+g1 <- TB.burden_recoded %>%
         select(country,
                g_whoregion,
                year,
@@ -606,20 +603,22 @@ g1 <- TB.burden %>%
         ggplot(aes(x = year,
                    y = incidence,
                    color = g_whoregion)) +
-        geom_line(color = "gray50") +
+        geom_line() +
         geom_point(size = 2) +
         labs(title = "Estimated Incidence per WHO Region",
              x = "",
              y = "Estimated Incidence (per 100,000)",
              caption = "WHO | Tuberculosis Data") +
+        guides(colour = guide_legend("WHO Region")) +
         theme_hc(bgcolor = "darkunica") +
         theme(axis.text = element_text(colour = "white"),
               axis.title = element_text(colour = "white"),
               panel.grid.major.x = element_line(color = "gray50"),
               title = element_text(size = 8),
-              legend.position = "bottom")
+              legend.position = "bottom",
+              legend.title = element_text(size = 10))
 
-g2 <- TB.burden %>%
+g2 <- TB.burden_recoded %>%
         select(country,
                g_whoregion,
                year,
@@ -629,18 +628,20 @@ g2 <- TB.burden %>%
         ggplot(aes(x = year,
                    y = incidence,
                    color = g_whoregion)) +
-        geom_line(color = "gray50") +
+        geom_line() +
         geom_point(size = 2) +
         labs(title = "Estimated mortality per WHO Region",
              subtitle = "Excluding HIV (per 100,000)",
              x = "",
              y = "Estimated Incidence (per 100,000)",
              caption = "WHO | Tuberculosis Data") +
+        guides(colour = guide_legend("WHO Region")) +
         theme_hc(bgcolor = "darkunica") +
         theme(axis.text = element_text(colour = "white"),
               axis.title = element_text(colour = "white"),
               panel.grid.major.x = element_line(color = "gray50"),
-              title = element_text(size = 8), legend.position = "bottom")
+              title = element_text(size = 8), legend.position = "bottom",
+              legend.title = element_text(size = 10))
 
 grid.arrange(g1, g2, nrow = 1)
 ```
@@ -651,15 +652,16 @@ grid.arrange(g1, g2, nrow = 1)
 
 ### Decline in incidence among the High Burden Countries
 
-In the plot below, Incidence is plotted on the x-axis, with the highest values on the left and 0 on the right. For most High Burden countries, the dark purple colored points representing the year 2000 are located on the left and the light yellow colored point representing the year 2016 is on the right, indicating a decrease in the number of incident cases across the years. Notice however that in the case of Angola, the opposite is true. In the case of the Philippines the yellow colored point is in the middle, indicating that there was some resurgence in the number of incident cases in recent years.
+In the plot below, Incidence is plotted on the x-axis, with the highest values on the left and 0 on the right. For most High Burden countries, the dark purple colored points representing the year 2000 are located on the left and the light yellow colored point representing the year 2016 is on the right, indicating a decrease in the number of incident cases across the years. Notice however that in the case of Angola, Liberia, and Mozambique, the opposite is true. In the case of the Philippines the yellow colored point is in the middle, indicating that there was some resurgence in the number of incident cases in recent years.
 
-The distance between the purple colored points and the yellow colored points quantifies the amount of change.The longer the distance the greater the amount of change.
+The distance between the purple colored points and the yellow colored points quantifies the amount of change. The longer the distance, the greater the amount of change. Tanzania, Zambia, Cambodia, and Ethiopia seem to be getting there slowly but surely while Zimbabwe, Kenya, and the Central African Republic are in a hurry to get there by leaps and bounds. The goal set by the WHO is less than 10 tuberculosis cases per 100,000.
 
 The plot below was inspired by a plot created by [eugejoh](https://github.com/eugejoh). I tried to recreate it with some changes added.
 
 ```{r}
-top30 %>%
-        ggplot(aes(x = reorder(country, e_inc_100k),
+TB.burden_recoded %>%
+        filter(country %in% top30) %>%
+        ggplot(aes(x = reorder(country_abbrev, e_inc_100k),
                    y = e_inc_100k,
                    color = year)) +
         geom_point(size = 3) +
@@ -687,22 +689,18 @@ top30 %>%
 
 The plot below is a variant of the plot above except that it shows the **estimate TB mortality** per 100,000. It conveys the rate of decline more effectively by showing the angle of the slope of the line. The steeper the slope the faster the rate of decline. It also shows whether the downward trend was continuous or whether there were periods of reversal. 
 
-There was a steady rapid decline in Ethiopia, Central African Republic, and Democratic People's Republic of Korea while the gentler slope of the line for India, Indonesia and the Philippines show a slow but steady decline.
+There was a steady rapid decline in Ethiopia, Central African Republic, and South Korea while the gentler slope of the line for India, Indonesia and the Philippines show a slow but steady decline.
 
 ```{r fig.width=8, fig.height=7}
-top30$country <- recode(top30$country,
-                        "Central African Republic" = "Cen African Rep",
-                        "Democratic People's Republic of Korea" = "DPR Korea",
-                        "Democratic Republic of the Congo" = "DP Congo",
-                        "United Republic of Tanzania" = "UR Tanzania")
 
-ggplot(data = top30,
-       aes(x = year,
+TB.burden_recoded %>%
+        filter(country %in% top30) %>%
+        ggplot(aes(x = year,
            y = e_mort_exc_tbhiv_100k,
            color = country)) +
         geom_point() +
         geom_line() +
-        facet_wrap(~country, ncol = 5) +
+        facet_wrap(~country_abbrev, ncol = 5) +
         guides(color= FALSE) +
         labs(title = "Estimated Mortality among High Burden Countries 2000 - 2016",
              subtitle = "Excluding HIV (per 100,000)",
@@ -716,10 +714,11 @@ ggplot(data = top30,
 For direct comparison between countries, the plot below provides a better view. Countries that might be considered outliers or different from the rest, are highlighted. It also reveals the upward and downward trends clearly across the years. Identifying which line represents a certain country can be difficult.
 
 ```{r}
-top30 %>%
+TB.burden_recoded %>%
+        filter(country %in% top30) %>%
         ggplot(aes(x = year,
                    y = e_mort_exc_tbhiv_100k,
-                   color = country)) +
+                   color = country_abbrev)) +
         geom_point() +
         geom_line() +
         labs(title = "Decline in Mortality among High Burden Countries 2000 - 2016",
@@ -734,7 +733,7 @@ top30 %>%
 
 ## Interactive Plot
 
-Each point represents a country on the interactive plot below. Estimated mortality is plotted on the x axis and estimated incidence on the y axis. The size of the points map the estimated population number and the color maps the WHO region where the country belongs. Year is depicted by the movement and position of the datapoint on the plot.  
+Each point represents a high TB burden country on the interactive plot below. Estimated mortality is plotted on the x axis and estimated incidence on the y axis. The size of the points map the estimated population number and the color maps the WHO region where the country belongs. Year is depicted by the movement and position of the datapoint on the plot.  
 
 Hovering the pointer using the mouse on a datapoint/country reveals all the information mentioned above. You can adjust the slider at the bottom of the plot to whichever year you desire to show the data for a particular year. 
 
@@ -743,13 +742,13 @@ Repeatedly playing the video or sequence of events backward and forward allows o
 ```{r fig.width=8, warning=FALSE, message=FALSE}
 library(plotly)
 
-gg <- TB.burden %>% filter(country %in% unique(top30_copy$country)) %>% ggplot(aes(x = e_mort_100k, y = e_inc_100k, color = g_whoregion)) + geom_point(aes(size = e_pop_num, frame = year, ids = country)) + labs(x= "Estimated Mortality (per 100,000)", y = "Estimated Incidence (per 100,000)") + scale_x_log10() + scale_y_log10() + theme_hc(bgcolor = "darkunica") + scale_colour_hc("darkunica") + theme(legend.position = "bottom")
+gg <- TB.burden_recoded %>% filter(country %in% top30) %>% ggplot(aes(x = e_mort_100k, y = e_inc_100k, color = g_whoregion)) + geom_point(aes(size = e_pop_num, frame = year, ids = country)) + labs(x= "Estimated Mortality (per 100,000)", y = "Estimated Incidence (per 100,000)") + theme_hc(bgcolor = "darkunica") + scale_colour_hc("darkunica") + theme(legend.position = "bottom")
 ggplotly(gg)
 ```
 
 ## Summary Plot
 
-A diverging barplot is a wonderful tool to show a summary of the data. Coloring the bars as to whether the number of incident TB cases increased or declined conveys the information in an expedient manner.
+A diverging barplot is a wonderful tool to show a summary of the data. Coloring the bars as to whether the number of incident TB cases increased or declined conveys the information in an expedient manner. Let's look at the period between 2010 to 2016 and see whether incidence increased or decreased for each country.
 
 Our list of countries is quite long which resuilts in a very long plot.
 
@@ -803,7 +802,7 @@ ggplot(merged_df,
               axis.title.y = element_blank())
 ```
 
-Of the `r length(unique(TB.burden$country))` countries in the WHO list of countries, `r length(below$country)` had an increase in estimated incidence of TB cases between the period 2010 to 2016. Among these, `r sum(below$country %in% top30_copy$country)` were from the High Burden countries. These were: `r below$country[below$country %in% top30$country]`
+Of the `r length(unique(TB.burden$country))` countries in the WHO list of countries, `r length(below$country)` had an increase in estimated incidence of TB cases between the period 2010 to 2016. Among these, `r sum(below$country %in% top30)` were from the High Burden countries. These were: `r below$country[below$country %in% top30]`
 
 ## Case Fatality Ratio
 
@@ -833,7 +832,7 @@ TB.burden %>%
     coord_flip() +
     labs(title = "The 30 High Burden Countries",
          subtitle = "Case Fatality Ratio",
-         x = "", y = "Count",
+         x = "", y = "Percent",
          caption = "WHO | Tuberculosis Data") +
     theme_hc(bgcolor = "darkunica") +
     theme(axis.text = element_text(colour = "white"),
@@ -842,8 +841,9 @@ TB.burden %>%
           panel.grid.major.x = element_line(color = "gray50"))
 ```
 
+It is noteworthy to point out that even though the Philippines, China, and Cambodia are among the High Burden TB Countries, they rank high in terms of low Case Fatality Ratio among the countries of the world.  
 
-> *This is a key indicator for monitoring progress towards the 2020 and 2025*
+> *CFR is a key indicator for monitoring progress towards the 2020 and 2025*
 > *milestones. A CFR of 6% is required to achieve the 2025 global milestone*
 > *for reductions in TB deaths and cases.*
 
